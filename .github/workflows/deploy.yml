@@ -15,6 +15,11 @@ jobs:
     - name: Checkout source code
       uses: actions/checkout@v4
 
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
     - name: Enable Corepack
       run: corepack enable
 

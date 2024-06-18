@@ -30,7 +30,7 @@ describe("HttpAgent#makeRequest", () => {
 
   it("should ignore data for DELETE requests", async () => {
     const data = { first_name: faker.name.firstName(), last_name: faker.name.lastName() };
-    const req = agent.makeRequest(HttpMethod.DELETE, mockResourceURL, data);
+    const req = agent.makeRequest(HttpMethod.DELETE, mockResourceURL).query(data);
     const res = await req.do<TestRequest>();
 
     expect(res.method.toUpperCase()).to.be.eq(HttpMethod.DELETE);
@@ -40,7 +40,7 @@ describe("HttpAgent#makeRequest", () => {
 
   it("should ignore data for GET requests", async () => {
     const data = { first_name: faker.name.firstName(), last_name: faker.name.lastName() };
-    const req = agent.makeRequest(HttpMethod.GET, mockResourceURL, data);
+    const req = agent.makeRequest(HttpMethod.GET, mockResourceURL).query(data);
     const res = await req.do<TestRequest>();
 
     expect(res.method.toUpperCase()).to.be.eq(HttpMethod.GET);

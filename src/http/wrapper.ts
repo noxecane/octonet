@@ -63,6 +63,15 @@ export class RequestWrapper<T extends object> {
   }
 
   /**
+   * Set the query parameters of the request
+   * @param data query paramaters
+   */
+  query(data: { [k: string]: string }) {
+    this.request.params = data;
+    return this;
+  }
+
+  /**
    * Set the content-type of the request
    * @param t type of request body
    */

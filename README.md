@@ -1,6 +1,6 @@
 # Octonet
 
-![Github Actions](https://github.com/risevest/octonet/actions/workflows/build-test.yml/badge.svg)
+![Github Actions](https://github.com/noxecane/octonet/actions/workflows/build-test.yml/badge.svg)
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 
 ## About

@@ -50,7 +50,7 @@ The various types of HTTP errors provided by Octonet are summarized in the table
 ## Example using HTTP Agent and Errors
 
 ```typescript
-import { AgentConfig, HttpAgent, Logger } from "@risemaxi/octonet";
+import { AgentConfig, HttpAgent, Logger } from "@noxecame/octonet";
 
 const env = process.env;
 

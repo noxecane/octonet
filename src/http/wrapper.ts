@@ -14,6 +14,16 @@ export interface AuthConfig {
   timeout: string;
 }
 
+/** Possible query parameter value types */
+type ParamValue = number | string | boolean | Date | ParamValue[] | { [key: string]: ParamValue };
+
+/**
+ * Query parameter mapping
+ */
+export interface Params {
+  [key: string]: ParamValue;
+}
+
 /**
  * Any type of async code to be run. Not the actions will not be bound to the
  * request wrapper.
@@ -67,7 +77,7 @@ export class RequestWrapper<T extends object> {
    * Set the query parameters of the request
    * @param data query paramaters
    */
-  query(data: { [k: string]: string }) {
+  query(data: Params) {
     Object.assign(this.request.params, data);
     return this;
   }

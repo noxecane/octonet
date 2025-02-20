@@ -1,4 +1,4 @@
-import { AxiosRequestConfig, AxiosResponse } from "axios";
+import { AxiosRequestConfig, AxiosResponse, AxiosResponseHeaders } from "axios";
 import { Request, Response } from "express";
 import { cloneDeep, isPlainObject, unset } from "lodash";
 
@@ -75,24 +75,28 @@ export function sanitized<T = any>(...paths: string[]) {
  */
 export function axiosRequest(...paths: string[]) {
   return (conf: AxiosRequestConfig) => {
-    const log = { method: conf.method, url: conf.url, headers: conf.headers, params: conf.params };
+    const log = {
+      method: conf.method,
+      url: conf.url,
+      headers: (conf.headers as any)?.toJSON?.() || {},
+      params: conf.params
+    };
 
     // remove default header config
-    const headers = Object.assign({}, conf.headers);
+    const headers: Record<string, string | undefined> = { ...log.headers };
     axiosDefaultHeaders.forEach(k => {
       delete headers[k];
     });
 
     log.headers = headers;
 
-    // when we get the config from the axios response
+    // Handle request data
     if (typeof conf.data === "string") {
       conf.data = JSON.parse(conf.data);
     }
 
     if (conf.data && Object.keys(conf.data).length !== 0) {
       const logBody = deepSanitizeObj(conf.data, ...paths);
-
       log["data"] = logBody;
     }
 
@@ -110,7 +114,7 @@ export function axiosResponse(...paths: string[]) {
 
     return {
       statusCode: res.status,
-      headers: res.headers,
+      headers: res.headers as AxiosResponseHeaders,
       body: data
     };
   };

@@ -1,4 +1,10 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
+import axios, {
+  AxiosHeaders,
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse,
+  InternalAxiosRequestConfig
+} from "axios";
 
 import { Logger } from "../logging/logger";
 import { dateReviver } from "../strings";
@@ -97,18 +103,24 @@ export class HttpAgent {
   private useLogger(logger: Logger) {
     const onRequest = (reqConfig: AxiosRequestConfig) => {
       logger.axiosRequest(reqConfig);
-      return reqConfig;
+      if (!(reqConfig.headers instanceof AxiosHeaders)) {
+        reqConfig.headers = new AxiosHeaders(reqConfig.headers);
+      }
+
+      return reqConfig as InternalAxiosRequestConfig;
     };
+
     const onResponse = (res: AxiosResponse) => {
       logger.axiosResponse(res);
       return res;
     };
+
     const onErrorResponse = (err: any) => {
       logger.axiosError(err);
       return Promise.reject(err);
     };
 
-    this.instance.interceptors.request.use(onRequest, Promise.reject);
+    this.instance.interceptors.request.use(onRequest, error => Promise.reject(error));
     this.instance.interceptors.response.use(onResponse, onErrorResponse);
   }
 

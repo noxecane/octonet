@@ -57,7 +57,8 @@ describe("acquireLock", () => {
     const latestOwner = faker.datatype.uuid();
 
     const acceptedFirst = await acquireLock(redis, "locks", firstOwner, "500ms");
-    await sleep(500);
+    // wait past the TTL: the lock's clock starts when redis gets the SET, a little after ours
+    await sleep(600);
     const acceptedLatest = await acquireLock(redis, "locks", latestOwner, "4s");
 
     expect(acceptedFirst).to.be.true;
@@ -78,7 +79,7 @@ describe("releaseLock", () => {
   it("should ignore expired lock", async () => {
     const owner = faker.datatype.uuid();
     const owned = await acquireLock(redis, "locks", owner, "1s");
-    await sleep(1000);
+    await sleep(1100);
     const released = await releaseLock(redis, "locks", owner);
 
     expect(owned).to.be.true;

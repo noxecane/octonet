@@ -32,7 +32,34 @@ Redaction now has one defined behaviour, see [docs/Logging.md](docs/Logging.md#r
 
 ### Internal
 
+- Releases are published locally (see [RELEASING.md](RELEASING.md)): `prepublishOnly` cleans `dist/` and
+  rebuilds, and the `release`-branch deploy workflow is removed.
 - CI pins Yarn through `packageManager` (4.18.1) instead of installing the latest release on every run, which
   had broken `yarn install --immutable`.
 - Lockfile refreshes amqplib to 0.10.9 (still `^0.10.3`): RabbitMQ 4.1+ rejects the 4096-byte `frame_max` that
   0.10.3 offers.
+
+## 0.2.2
+
+### Fixed
+
+- `runJob` never released the distributed lock after running a job.
+
+## 0.2.1
+
+### Fixed
+
+- `.query()` only accepted string values; it now takes numbers, booleans, dates, arrays and nested objects.
+
+## 0.2.0
+
+### Changed
+
+- **Breaking:** `RedisQueue.work` no longer polls an empty queue waiting for another instance to fill it
+  (master/worker mode removed); it returns once the queue is empty.
+- **Breaking:** the express response serializer no longer parses a stringified JSON `res.locals.body`; set it
+  to the object instead.
+
+## 0.1.0
+
+- First release: HTTP agent, NATS and AMQP consumers, jobs, Redis token store and logging.

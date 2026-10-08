@@ -1,12 +1,12 @@
+import { randomUUID } from "crypto";
 import { Server } from "http";
 
-import { faker } from "@faker-js/faker";
 import axios from "axios";
 import { RingBuffer } from "bunyan";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { v4 } from "uuid";
 
+import { faker } from "../fake";
 import { HttpAgent, HttpMethod } from "../../src/http/agent";
 import { APIError, HttpError, NoAuthorizationTokenError, NoRequestIDError, TimeoutError } from "../../src/http/errors";
 import * as jwt from "../../src/http/jwt";
@@ -142,7 +142,7 @@ describe("RequestWrapper#track", () => {
   it("should transfer request ID", async () => {
     const request = { method: HttpMethod.GET, url: mockResourceURL };
     const req = new RequestWrapper(axiosInstance, service, authConfig, request);
-    const sourceReq: any = { headers: { [requestIDHeader]: v4() } };
+    const sourceReq: any = { headers: { [requestIDHeader]: randomUUID() } };
 
     const res = await req.track(sourceReq).do();
 

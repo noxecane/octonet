@@ -1,7 +1,7 @@
-import { faker } from "@faker-js/faker";
 import { expect } from "chai";
 import IORedis, { Redis } from "ioredis";
 
+import { faker } from "../fake";
 import { RedisStore } from "../../src";
 import { randomString, sleep } from "../helpers";
 

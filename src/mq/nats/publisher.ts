@@ -1,7 +1,8 @@
+import { randomUUID } from "crypto";
+
 import { JSONCodec, JetStreamClient } from "nats";
 
 import { injectable } from "inversify";
-import { v4 as uuidV4 } from "uuid";
 
 @injectable()
 export class NatsPublisher {
@@ -11,6 +12,6 @@ export class NatsPublisher {
 
   async publish(subject: string, data: any): Promise<void> {
     const message = this.codec.encode(data);
-    await this.client.publish(subject, message, { msgID: uuidV4() });
+    await this.client.publish(subject, message, { msgID: randomUUID() });
   }
 }

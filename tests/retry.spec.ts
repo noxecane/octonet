@@ -1,8 +1,8 @@
-import { faker } from "@faker-js/faker";
 import Bunyan from "bunyan";
 import { expect } from "chai";
 import sinon from "sinon";
 
+import { faker } from "./fake";
 import { Logger } from "../src/logging/logger";
 import { defaultSerializers } from "../src/logging/serializers";
 import { ExitError, RetryError, retryOnError, retryOnRequest, retryTimeouts, wrapHandler } from "../src/retry";

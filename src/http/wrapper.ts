@@ -1,9 +1,10 @@
+import { randomUUID } from "crypto";
+
 import { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { Request } from "express";
 import FormData from "form-data";
 import { each } from "lodash";
 import qs from "qs";
-import { v4 } from "uuid";
 
 import { APIError, HttpError, NoAuthorizationTokenError, NoRequestIDError, TimeoutError } from "./errors";
 import { encode } from "./jwt";
@@ -144,7 +145,7 @@ export class RequestWrapper<T extends object> {
     }
 
     Object.assign(this.request.headers, {
-      "X-Request-ID": !!req ? req.headers["x-request-id"] : v4(),
+      "X-Request-ID": !!req ? req.headers["x-request-id"] : randomUUID(),
       "X-Origin-Service": this.service
     });
 

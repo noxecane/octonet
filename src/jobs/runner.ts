@@ -1,8 +1,9 @@
+import { randomUUID } from "crypto";
+
 import { Container } from "inversify";
 import { Redis } from "ioredis";
 import ms from "ms";
 import cron, { ScheduledTask } from "node-cron";
-import { v4 as uuid } from "uuid";
 
 import { Logger } from "../logging/logger";
 import { ExitError, RetryError, retryOnRequest, wrapHandler } from "../retry";
@@ -25,7 +26,7 @@ export class JobRunner {
    */
   constructor(container: Container) {
     this.jobs = getJobs(container).map(j => ({ ...j, task: null }));
-    this.lockID = uuid();
+    this.lockID = randomUUID();
   }
 
   /**

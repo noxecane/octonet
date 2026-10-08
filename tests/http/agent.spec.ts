@@ -89,6 +89,13 @@ describe("HttpAgent#useLogger", () => {
     expect(responseLog.axios_res.body.method).to.be.eq(HttpMethod.POST);
   });
 
+  it("should not log the authorization token", async () => {
+    await agent.makeRequest(HttpMethod.GET, mockResourceURL).auth().do<TestRequest>();
+
+    const [requestLog] = ringbuffer.records;
+    expect(requestLog.axios_req.headers.Authorization).to.eq("[REDACTED]");
+  });
+
   it("should log errors", async () => {
     try {
       await agent.makeRequest(HttpMethod.GET, `${mockResourceURL}/error`).do<TestRequest>();

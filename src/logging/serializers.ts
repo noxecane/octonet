@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { cloneDeep, isPlainObject, unset } from "lodash";
 
 const axiosDefaultHeaders = ["common", "delete", "get", "head", "post", "put", "patch"];
+const sensitiveHeaders = ["authorization", "proxy-authorization", "cookie", "set-cookie"];
 
 /**
  * Create serializers for common log entries. This entries would
@@ -88,7 +89,7 @@ export function axiosRequest(...paths: string[]) {
       delete headers[k];
     });
 
-    log.headers = headers;
+    log.headers = redactHeaders(headers);
 
     // Handle request data
     if (typeof conf.data === "string") {
@@ -131,7 +132,7 @@ export function expressRequest(...paths: string[]): (req: Request) => object {
     const log = {
       method: req.method,
       url: req.url,
-      headers: req.headers,
+      headers: redactHeaders(req.headers),
       params: req.params,
       remoteAddress: req.socket.remoteAddress,
       remotePort: req.socket.remotePort
@@ -157,7 +158,7 @@ export function expressResponse(...paths: string[]): (res: Response) => object {
 
     const log = {
       statusCode: res.statusCode,
-      headers: res.getHeaders()
+      headers: redactHeaders(res.getHeaders())
     };
 
     if (res.locals.body && Object.keys(res.locals.body).length !== 0) {
@@ -167,6 +168,23 @@ export function expressResponse(...paths: string[]): (res: Response) => object {
 
     return log;
   };
+}
+
+/**
+ * Copy headers, hiding the values of credentials such as `Authorization` and cookies
+ * @param headers request or response headers
+ */
+export function redactHeaders<T extends object>(headers: T): T {
+  if (!headers) return headers;
+
+  const copy = { ...headers };
+  Object.keys(copy).forEach(k => {
+    if (sensitiveHeaders.includes(k.toLowerCase())) {
+      copy[k] = "[REDACTED]";
+    }
+  });
+
+  return copy;
 }
 
 function deepSanitizeObj(data: object, ...paths: string[]) {

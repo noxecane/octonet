@@ -1,4 +1,4 @@
-import { Logger, defaultSerializers } from "../../src";
+import { Logger, defaultSerializers, redactHeaders } from "../../src";
 
 import Bunyan from "bunyan";
 import axios from "axios";
@@ -73,6 +73,14 @@ describe("Bunyan#Request", () => {
     expect(properties.req.body).to.not.have.property("password");
     expect(properties.req.body.user).to.not.have.property("password");
     expect(properties.req.body.user).to.have.property("other_prop");
+  });
+
+  it("should redact credential headers on request", async () => {
+    await axios.get(`${baseUrl}/req`, { headers: { Authorization: "Bearer secret", Cookie: "sid=secret", "X-Other": "kept" } });
+    const { headers } = ringbuffer.records[0].req;
+    expect(headers.authorization).to.eq("[REDACTED]");
+    expect(headers.cookie).to.eq("[REDACTED]");
+    expect(headers["x-other"]).to.eq("kept");
   });
 
   it("should ensure non-sensitive data are logged on request", async () => {
@@ -163,5 +171,21 @@ describe("Bunyan#httpError", () => {
     expect(properties).to.have.property("err");
     expect(properties).to.have.property("req");
     expect(properties).to.have.property("res");
+  });
+});
+
+describe("redactHeaders", () => {
+  it("should hide credentials regardless of case without touching the original", () => {
+    const headers = { Authorization: "Bearer secret", "set-cookie": ["sid=secret"], "Content-Type": "application/json" };
+    expect(redactHeaders(headers)).to.deep.eq({
+      Authorization: "[REDACTED]",
+      "set-cookie": "[REDACTED]",
+      "Content-Type": "application/json"
+    });
+    expect(headers.Authorization).to.eq("Bearer secret");
+  });
+
+  it("should pass through missing headers", () => {
+    expect(redactHeaders(undefined)).to.be.undefined;
   });
 });

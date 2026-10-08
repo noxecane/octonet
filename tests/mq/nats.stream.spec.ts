@@ -1,11 +1,11 @@
 import "reflect-metadata";
 
-import { faker } from "@faker-js/faker";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import ms from "ms";
 import { DiscardPolicy, JetStreamManager, NatsConnection, RetentionPolicy, StorageType, connect } from "nats";
 
+import { faker } from "../fake";
 import { StreamFactory } from "../../src/mq";
 import { getFromStream } from "../helpers";
 

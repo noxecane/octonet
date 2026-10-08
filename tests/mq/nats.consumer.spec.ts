@@ -1,11 +1,11 @@
 import "reflect-metadata";
 
-import { faker } from "@faker-js/faker";
 import { expect } from "chai";
 import { Container } from "inversify";
 import { JetStreamManager, NatsConnection, StorageType, connect } from "nats";
 import sinon from "sinon";
 
+import { faker } from "../fake";
 import { Consumers, Logger, NatsPublisher, defaultSerializers } from "../../src";
 import { repeat, sleep } from "../helpers";
 import {

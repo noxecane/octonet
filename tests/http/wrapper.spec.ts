@@ -1,12 +1,12 @@
 import { randomUUID } from "crypto";
 import { Server } from "http";
 
-import { faker } from "@faker-js/faker";
 import axios from "axios";
 import { RingBuffer } from "bunyan";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 
+import { faker } from "../fake";
 import { HttpAgent, HttpMethod } from "../../src/http/agent";
 import { APIError, HttpError, NoAuthorizationTokenError, NoRequestIDError, TimeoutError } from "../../src/http/errors";
 import * as jwt from "../../src/http/jwt";

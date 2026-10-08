@@ -1,9 +1,9 @@
-import { faker } from "@faker-js/faker";
 import { expect } from "chai";
 import { Container } from "inversify";
 import IORedis, { Redis } from "ioredis";
 import sinon from "sinon";
 
+import { faker } from "../fake";
 import { Logger, defaultSerializers } from "../../src";
 import { JobRunner, acquireLock, releaseLock } from "../../src/jobs/runner";
 import { jumpBy, multiply, sleep, withTimePaused } from "../helpers";

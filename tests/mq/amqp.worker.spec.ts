@@ -1,10 +1,10 @@
 import "reflect-metadata";
 
-import { faker } from "@faker-js/faker";
 import { expect } from "chai";
 import { Container } from "inversify";
 import sinon from "sinon";
 
+import { faker } from "../fake";
 import { Logger } from "../../src/logging/logger";
 import { defaultSerializers } from "../../src/logging/serializers";
 import { Queue, QueueFactory, Workers } from "../../src/mq";

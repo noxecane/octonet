@@ -149,8 +149,31 @@ slow or answers with a non-2xx status the batch is dropped (no retries), and a s
 for the whole outage, plus one when Loki is reachable again. While a request is in flight new records queue
 up to `max_queue`. Logging only goes to Loki at the logger's level (`verbose: false` → errors only).
 
-## Redacted headers
+## Redaction
 
-The default serializers replace the values of `Authorization`, `Proxy-Authorization`, `Cookie` and
-`Set-Cookie` with `[REDACTED]` in logged requests and responses (express and axios). `redactHeaders` is
-exported if you write your own serializers.
+Everything the serializers hide starts with `[REDACTED`, so one search finds every redaction. A
+redacted field is never removed: you can still tell it was sent.
+
+**Paths** passed to `defaultSerializers(...paths)` (e.g. `"password"`, `"card.number"`) are matched at
+any depth of request/response bodies and events, and their values are logged as `[REDACTED]`. Use them
+for passwords and anything else low-entropy.
+
+**Credential headers** (`Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`) are always
+redacted, by express and axios serializers alike, into a fingerprint: the first 8 hex characters of the
+value's SHA-256.
+
+```
+Authorization: Bearer [REDACTED sha256:3f9a1c2e]
+Cookie:        sid=[REDACTED sha256:9b0e44d1]; theme=[REDACTED sha256:c1d07a52]
+Set-Cookie:    sid=[REDACTED sha256:9b0e44d1]; Path=/; HttpOnly
+```
+
+The auth scheme, cookie names and cookie attributes are kept for debugging. The fingerprint tells you
+whether requests used the same credential, and lets you find a leaked token in the logs: hash it with
+`fingerprint(token)` and search for the result. It can't be turned back into the token. Don't use it
+for passwords, whose hashes can be brute-forced; use a path instead.
+
+`redactHeaders`, `fingerprint`, `sanitized` and `REDACTED` are exported for custom serializers.
+
+To find out *who* made a request, log the identity your auth resolved (user or session id), not the
+credential.

@@ -16,15 +16,23 @@
   });
   ```
 
-- `redactHeaders` helper for custom serializers.
+- `redactHeaders`, `fingerprint` and the `REDACTED` marker for custom serializers.
 
 ### Changed
 
-- The default serializers now log `Authorization`, `Proxy-Authorization`, `Cookie` and `Set-Cookie` header
-  values as `[REDACTED]` (express requests/responses and axios requests). Pass your own serializers if you
-  relied on seeing them.
+Redaction now has one defined behaviour, see [docs/Logging.md](docs/Logging.md#redaction):
+
+- **Paths given to `defaultSerializers` are redacted, not removed.** `password: "hunter2"` is now logged as
+  `password: "[REDACTED]"` instead of disappearing, so you can tell it was sent.
+- **Credential headers are fingerprinted.** `Authorization`, `Proxy-Authorization`, `Cookie` and
+  `Set-Cookie` are logged as e.g. `Bearer [REDACTED sha256:3f9a1c2e]`, in express and axios requests and
+  responses. Previously they were logged in full.
+- The `axios_res` serializer now logs headers as a plain object rather than an `AxiosHeaders` instance (the
+  JSON output is the same).
 
 ### Internal
 
 - CI pins Yarn through `packageManager` (4.18.1) instead of installing the latest release on every run, which
   had broken `yarn install --immutable`.
+- Lockfile refreshes amqplib to 0.10.9 (still `^0.10.3`): RabbitMQ 4.1+ rejects the 4096-byte `frame_max` that
+  0.10.3 offers.

@@ -8,6 +8,7 @@ export { cron, daily, hourly, job, monthly, query, weekly } from "./jobs/decorat
 export { RedisQueue } from "./jobs/queue";
 export { JobRunner } from "./jobs/runner";
 export * from "./logging/logger";
+export { LokiConfig } from "./logging/loki";
 export * from "./logging/serializers";
 export * from "./mq";
 export { ExitError, RetryError, retryOnError, retryOnRequest } from "./retry";

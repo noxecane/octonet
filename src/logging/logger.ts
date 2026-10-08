@@ -2,6 +2,8 @@ import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import Bunyan, { ERROR, INFO } from "bunyan";
 import { Request, Response } from "express";
 
+import { LokiConfig, LokiStream } from "./loki";
+
 export interface LogError {
   err: Error;
   [key: string]: any;
@@ -17,10 +19,16 @@ export interface LoggerConfig {
   serializers: Serializers;
   verbose?: boolean;
   buffer?: NodeJS.WritableStream | Bunyan.WriteFn;
+  /**
+   * also ship logs to Loki, next to stdout(or `buffer`). Nothing is sent when unset
+   * or when `url` is empty.
+   */
+  loki?: LokiConfig;
 }
 
 export class Logger {
   private logger: Bunyan;
+  private loki?: LokiStream;
 
   constructor(logger: Bunyan);
   constructor(config: LoggerConfig);
@@ -28,18 +36,34 @@ export class Logger {
     if (config instanceof Bunyan) {
       this.logger = config;
     } else {
+      const level = config.verbose === false ? ERROR : INFO;
+      const streams: Bunyan.Stream[] = [
+        {
+          stream: config.buffer || process.stdout,
+          level,
+          type: !!config.buffer ? "raw" : "stream"
+        }
+      ];
+
+      if (config.loki?.url) {
+        this.loki = new LokiStream(config.loki);
+        streams.push({ stream: this.loki as any, level, type: "raw" });
+      }
+
       this.logger = new Bunyan({
         name: config.name,
         serializers: config.serializers,
-        streams: [
-          {
-            stream: config.buffer || process.stdout,
-            level: config.verbose === false ? ERROR : INFO,
-            type: !!config.buffer ? "raw" : "stream"
-          }
-        ]
+        streams
       });
     }
+  }
+
+  /**
+   * Wait for logs still on their way to Loki. Call it before the process exits.
+   * It's a no-op without Loki and never rejects.
+   */
+  flush(): Promise<void> {
+    return this.loki?.flush() ?? Promise.resolve();
   }
 
   /**
@@ -47,7 +71,9 @@ export class Logger {
    * @param labels annotation of new sub logger
    */
   child(labels: object) {
-    return new Logger(this.logger.child(labels));
+    const child = new Logger(this.logger.child(labels));
+    child.loki = this.loki;
+    return child;
   }
 
   /**

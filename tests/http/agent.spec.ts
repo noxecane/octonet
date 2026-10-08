@@ -1,7 +1,6 @@
 import { Server } from "http";
 
 import { faker } from "@faker-js/faker";
-import { AxiosHeaders } from "axios";
 import { RingBuffer } from "bunyan";
 import { expect } from "chai";
 
@@ -81,12 +80,20 @@ describe("HttpAgent#useLogger", () => {
     expect(requestLog.axios_req.method.toUpperCase()).to.be.eq(HttpMethod.POST);
     expect(requestLog.axios_req.url).to.be.eq(mockResourceURL);
     expect(requestLog.axios_req.headers).to.be.a("object");
-    expect(requestLog.axios_req.data).to.deep.equal(data);
+    expect(requestLog.axios_req.data).to.deep.equal({ ...data, hidden: "[REDACTED]" });
 
-    expect(responseLog.axios_res.body.body).to.deep.equal(data);
+    expect(responseLog.axios_res.body.body).to.deep.equal({ ...data, hidden: "[REDACTED]" });
     expect(responseLog.axios_res.statusCode).to.be.eq(200);
-    expect(responseLog.axios_res.headers).to.be.instanceOf(AxiosHeaders);
+    expect(responseLog.axios_res.headers).to.have.property("content-type").that.contains("application/json");
     expect(responseLog.axios_res.body.method).to.be.eq(HttpMethod.POST);
+  });
+
+  it("should not log the authorization token", async () => {
+    await agent.makeRequest(HttpMethod.GET, mockResourceURL).auth().do<TestRequest>();
+
+    const [requestLog] = ringbuffer.records;
+    // the scheme stays, the token becomes a fingerprint
+    expect(requestLog.axios_req.headers.Authorization).to.match(/^Test \[REDACTED sha256:[0-9a-f]{8}\]$/);
   });
 
   it("should log errors", async () => {

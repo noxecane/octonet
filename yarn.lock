@@ -958,13 +958,11 @@ __metadata:
     "@types/ms": "npm:^0.7.31"
     "@types/multer": "npm:^1.4.7"
     "@types/node": "npm:^24"
-    "@types/node-cron": "npm:^3.0.7"
     "@types/sinon": "npm:^10.0.13"
     axios: "npm:^1.20.0"
     bunyan: "npm:^1.8.15"
     chai: "npm:^4.3.7"
     chai-as-promised: "npm:^7.1.1"
-    cron-parser: "npm:^4.7.1"
     express: "npm:^4.22.0"
     form-data: "npm:^4.0.6"
     inversify: "npm:^6.0.1"
@@ -975,7 +973,6 @@ __metadata:
     ms: "npm:^2.1.3"
     multer: "npm:^2.2.0"
     nats: "npm:^2.11.0"
-    node-cron: "npm:^3.0.2"
     prettier: "npm:^2.8.3"
     qs: "npm:^6.16.0"
     reflect-metadata: "npm:^0.1.13"
@@ -1261,13 +1258,6 @@ __metadata:
   dependencies:
     "@types/express": "npm:*"
   checksum: 10c0/0bb0dfc399ef8f4e298eda88ef44ca7e5d2ec5c406ebb79424f88ba556fe26f46b4813b6d3f9c1e4adafc70fdcf89962eb5a0b8bfd726893ad9ece3e96f4f445
-  languageName: node
-  linkType: hard
-
-"@types/node-cron@npm:^3.0.7":
-  version: 3.0.7
-  resolution: "@types/node-cron@npm:3.0.7"
-  checksum: 10c0/870f78035794e196c18ff06545dc2ef084f1e8fcce60614223a73afddc84e5055a9f14c174247141ce9f077011baeb9572627a51a0706bdb37e9ef90eaa2f846
   languageName: node
   linkType: hard
 
@@ -1983,15 +1973,6 @@ __metadata:
   version: 1.1.1
   resolution: "create-require@npm:1.1.1"
   checksum: 10c0/157cbc59b2430ae9a90034a5f3a1b398b6738bf510f713edc4d4e45e169bc514d3d99dd34d8d01ca7ae7830b5b8b537e46ae8f3c8f932371b0875c0151d7ec91
-  languageName: node
-  linkType: hard
-
-"cron-parser@npm:^4.7.1":
-  version: 4.7.1
-  resolution: "cron-parser@npm:4.7.1"
-  dependencies:
-    luxon: "npm:^3.2.1"
-  checksum: 10c0/7d4d9067dc8f90051ad73845ac6f7feba4638734a51df6343da3731d525e0e0de3124c2e00de84d65f26ec597c2b9290a97e1d503234e4279130f48cbe0d7ce7
   languageName: node
   linkType: hard
 
@@ -3545,13 +3526,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"luxon@npm:^3.2.1":
-  version: 3.2.1
-  resolution: "luxon@npm:3.2.1"
-  checksum: 10c0/2edd1400c7a785b01fa24ab491675c490a763054e0e147507b7b64caa6caad50329b48d482300c7ab5dc1a2630aaf84997496ffe7d2e166f9ea223f6caa719d9
-  languageName: node
-  linkType: hard
-
 "make-dir@npm:^3.0.0":
   version: 3.1.0
   resolution: "make-dir@npm:3.1.0"
@@ -3845,15 +3819,6 @@ __metadata:
   dependencies:
     tweetnacl: "npm:1.0.3"
   checksum: 10c0/eb50c1b3ea0eb6663fb246794e37f1b67f5a467db51e6c04f5032f2a4f6e098834211fca5b18852e5ce5d15817c30593b97e04cc2f8f571eeca924eaa84c62d9
-  languageName: node
-  linkType: hard
-
-"node-cron@npm:^3.0.2":
-  version: 3.0.2
-  resolution: "node-cron@npm:3.0.2"
-  dependencies:
-    uuid: "npm:8.3.2"
-  checksum: 10c0/9b67d817ec5cb373a7b5676b5984b1c9624b40765d939cb3e7072f5c7ed6133100cf90824118ddc87edc25b632d4457b3843384cbf323a35562634b0a8343c05
   languageName: node
   linkType: hard
 
@@ -4879,15 +4844,6 @@ __metadata:
   version: 1.0.1
   resolution: "utils-merge@npm:1.0.1"
   checksum: 10c0/02ba649de1b7ca8854bfe20a82f1dfbdda3fb57a22ab4a8972a63a34553cf7aa51bc9081cf7e001b035b88186d23689d69e71b510e610a09a4c66f68aa95b672
-  languageName: node
-  linkType: hard
-
-"uuid@npm:8.3.2":
-  version: 8.3.2
-  resolution: "uuid@npm:8.3.2"
-  bin:
-    uuid: dist/bin/uuid
-  checksum: 10c0/bcbb807a917d374a49f475fae2e87fdca7da5e5530820ef53f65ba1d12131bd81a92ecf259cc7ce317cbe0f289e7d79fdfebcef9bfa3087c8c8a2fa304c9be54
   languageName: node
   linkType: hard
 

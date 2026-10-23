@@ -1,7 +1,5 @@
 import ms from "ms";
 
-import { Logger } from "./logging/logger";
-
 /**
  * Custom error instance to allow handlers request a retry
  */
@@ -58,23 +56,6 @@ export async function retryOnRequest<T = any>(
   const shouldRetry = (err: Error) => err instanceof RetryError;
 
   return retry<T>(timeouts, shouldRetry, fn);
-}
-
-/**
- * Create a wrapper function that logs input and errror
- * @param logger octonet logger
- * @param fn function to be wrapped.
- */
-export function wrapHandler<T = any>(logger: Logger, fn: (t: T) => Promise<void>) {
-  return async function (data: T) {
-    logger.log({ data });
-    try {
-      await fn(data);
-    } catch (error) {
-      logger.error(error, { data });
-      throw error;
-    }
-  };
 }
 
 export function retryTimeouts(max: number, timeout: number) {

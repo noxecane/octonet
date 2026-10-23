@@ -9,6 +9,8 @@
 - **Breaking:** jobs (`@cron`, `@job`, `@query`, `hourly`/`daily`/`weekly`/`monthly`, `JobRunner`,
   `RedisQueue`) and the `node-cron` dependency, along with `wrapHandler` from the retry helpers. Use a
   dedicated job library instead.
+- **Breaking:** the retry helpers `retryOnError`, `retryOnRequest` and `ExitError`. `RetryError` stays, as
+  NATS consumers use it to ask for redelivery.
 
 ## 0.3.0
 

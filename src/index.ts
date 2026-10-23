@@ -8,6 +8,6 @@ export * from "./logging/logger";
 export { LokiConfig } from "./logging/loki";
 export * from "./logging/serializers";
 export * from "./mq";
-export { ExitError, RetryError, retryOnError, retryOnRequest } from "./retry";
+export { RetryError } from "./retry";
 export * from "./tokens/redis.store";
 export * from "./tokens/store";

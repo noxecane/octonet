@@ -13,7 +13,7 @@ export interface TokenStore {
    * @param val value the token will refer to
    * @param time timeout before expiry
    */
-  commision<T = any>(key: string, val: T, time: string): Promise<string>;
+  commission<T = any>(key: string, val: T, time: string): Promise<string>;
   /**
    * Get the data the token references without changing its lifetime
    * @param token token to check for

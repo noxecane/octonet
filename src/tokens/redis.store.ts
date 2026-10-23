@@ -28,7 +28,7 @@ const ifIndexIs = (command: string) => `
 export class RedisStore implements TokenStore {
   constructor(private redis: Redis) {}
 
-  async commision<T = any>(key: string, val: T, time: string): Promise<string> {
+  async commission<T = any>(key: string, val: T, time: string): Promise<string> {
     const token = crypto.randomBytes(32).toString("hex");
     const ttl = ms(time);
 

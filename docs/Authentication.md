@@ -32,7 +32,7 @@ req.headers.authorization = `Custom ${token}`;
 
 The **RedisStore** module **manages user sessions** and has 4 main utility functions through which token-related actions for authentication are performed in Octonet. They are discussed below:
 
-### **commision**_<T = any>_**(key**: _string_, **val**: _T_, **time**: _string_**)**: _Promise\<string>_
+### **commission**_<T = any>_**(key**: _string_, **val**: _T_, **time**: _string_**)**: _Promise\<string>_
 
 The _commission_ function creates a random token for a key and saves the data for it in Redis. The saved data can be accessed via the token. A key has at most one live token: a new one replaces the previous token, which stops working. `reset` and `revoke` find the token from the key, so you can change or end a session without knowing its token. Needs Redis 6.2 or newer.
 

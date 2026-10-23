@@ -6,11 +6,12 @@
 
 - **Security, breaking: `RedisStore` issues a fresh random token for every session.** Tokens were
   `HMAC(secret, key)`, so a key always got the same token: a stolen token came back on every later sign-in,
-  and anyone with the secret could compute any key's token. Now each `commision` returns a new token and
+  and anyone with the secret could compute any key's token. Now each `commission` returns a new token and
   retires the key's previous one (one live session per key). `reset` and `revoke` still work with only the
   key, through an index. The constructor drops the secret: `new RedisStore(redis)`. Existing sessions are
   not carried over. Needs Redis 6.2 or newer.
 - `reset` keeps the token's TTL even when it has none, instead of sending an invalid `PX -1`.
+- **Breaking:** `TokenStore.commision` is spelled `commission`. Rename your calls; there's no alias.
 
 ### Removed
 

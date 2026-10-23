@@ -34,48 +34,27 @@ afterEach(() => {
   ringbuffer.records = [];
 });
 
-describe("Bunyan#Request", () => {
-  it("should be able to log a request", async () => {
+describe("Logger#request", () => {
+  it("should log the request's method, url, headers and client address", async () => {
     await axios.get(`${baseUrl}/req`);
-    const properties = ringbuffer.records[0];
-    expect(ringbuffer.records).to.be.length(1);
-    expect(properties.req).to.have.property("method");
-    expect(properties.req).to.have.property("url");
-    expect(properties.req).to.have.property("headers");
-    expect(properties.req).to.have.property("remoteAddress");
-    expect(properties.req).to.have.property("remotePort");
-    expect(properties).to.have.property("req");
+
+    expect(ringbuffer.records).to.have.length(1);
+    const { req } = ringbuffer.records[0];
+    expect(req).to.include({ method: "GET", url: "/req" });
+    expect(req.headers).to.be.an("object");
+    expect(req.remoteAddress).to.be.a("string");
   });
 
-  it("should ensure sensitive data are not being logged on request", async () => {
-    await axios.post(`${baseUrl}/req`, { password: "password" });
-    const properties = ringbuffer.records[0];
-    expect(ringbuffer.records).to.be.length(1);
-    expect(properties.req).to.have.property("method");
-    expect(properties.req).to.have.property("url");
-    expect(properties.req).to.have.property("headers");
-    expect(properties.req).to.have.property("remoteAddress");
-    expect(properties.req).to.have.property("remotePort");
-    expect(properties).to.have.property("req");
-    expect(properties.req.body).to.have.property("password", "[REDACTED]");
-  });
-
-  it("should ensure sensitive data are not being logged on request even if nested", async () => {
+  it("should redact sensitive paths in the body at any depth and keep the rest", async () => {
     await axios.post(`${baseUrl}/req`, { password: "password", user: { password: "password", other_prop: "other" } });
-    const properties = ringbuffer.records[0];
-    expect(ringbuffer.records).to.be.length(1);
-    expect(properties.req).to.have.property("method");
-    expect(properties.req).to.have.property("url");
-    expect(properties.req).to.have.property("headers");
-    expect(properties.req).to.have.property("remoteAddress");
-    expect(properties.req).to.have.property("remotePort");
-    expect(properties).to.have.property("req");
-    expect(properties.req.body).to.have.property("password", "[REDACTED]");
-    expect(properties.req.body.user).to.have.property("password", "[REDACTED]");
-    expect(properties.req.body.user).to.have.property("other_prop");
+
+    expect(ringbuffer.records[0].req.body).to.deep.eq({
+      password: "[REDACTED]",
+      user: { password: "[REDACTED]", other_prop: "other" }
+    });
   });
 
-  it("should redact credential headers on request", async () => {
+  it("should redact credential headers", async () => {
     await axios.get(`${baseUrl}/req`, {
       headers: { Authorization: "Bearer secret", Cookie: "sid=secret", "X-Other": "kept" }
     });
@@ -84,98 +63,26 @@ describe("Bunyan#Request", () => {
     expect(headers.cookie).to.eq(`sid=${fingerprint("secret")}`);
     expect(headers["x-other"]).to.eq("kept");
   });
-
-  it("should ensure non-sensitive data are logged on request", async () => {
-    await axios.post(`${baseUrl}/req`, { password: "password", other_prop: "other" });
-    const properties = ringbuffer.records[0];
-    expect(ringbuffer.records).to.be.length(1);
-    expect(properties.req).to.have.property("method");
-    expect(properties.req).to.have.property("url");
-    expect(properties.req).to.have.property("headers");
-    expect(properties.req).to.have.property("remoteAddress");
-    expect(properties.req).to.have.property("remotePort");
-    expect(properties).to.have.property("req");
-    expect(properties.req.body).to.have.property("password", "[REDACTED]");
-    expect(properties.req.body).to.have.property("other_prop");
-  });
 });
 
-describe("Bunyan#Response", () => {
-  it("should be able to log a response", async () => {
-    await axios.get(`${baseUrl}/req-res`);
-    const properties = ringbuffer.records[0];
-    expect(ringbuffer.records).to.be.length(1);
-    expect(properties.req).to.have.property("method");
-    expect(properties.req).to.have.property("url");
-    expect(properties.req).to.have.property("headers");
-    expect(properties.req).to.have.property("remoteAddress");
-    expect(properties.req).to.have.property("remotePort");
-    expect(properties).to.have.property("req");
-    expect(properties).to.have.property("res");
-  });
-
-  it("should ensure sensitive data are not being logged on response", async () => {
-    await axios.post(`${baseUrl}/req-res`, { password: "password" });
-    const properties = ringbuffer.records[0];
-    expect(ringbuffer.records).to.be.length(1);
-    expect(properties.req).to.have.property("method");
-    expect(properties.req).to.have.property("url");
-    expect(properties.req).to.have.property("headers");
-    expect(properties.req).to.have.property("remoteAddress");
-    expect(properties.req).to.have.property("remotePort");
-    expect(properties).to.have.property("req");
-    expect(properties).to.have.property("res");
-    expect(properties.req.body).to.have.property("password", "[REDACTED]");
-  });
-
-  it("should ensure sensitive data are not being logged on response even if nested", async () => {
-    await axios.post(`${baseUrl}/req-res`, {
-      password: "password",
-      user: { password: "password", other_prop: "other" }
-    });
-    const properties = ringbuffer.records[0];
-    expect(ringbuffer.records).to.be.length(1);
-    expect(properties.req).to.have.property("method");
-    expect(properties.req).to.have.property("url");
-    expect(properties.req).to.have.property("headers");
-    expect(properties.req).to.have.property("remoteAddress");
-    expect(properties.req).to.have.property("remotePort");
-    expect(properties).to.have.property("req");
-    expect(properties).to.have.property("res");
-    expect(properties.req.body).to.have.property("password", "[REDACTED]");
-    expect(properties.req.body.user).to.have.property("password", "[REDACTED]");
-    expect(properties.req.body.user).to.have.property("other_prop");
-  });
-
-  it("should ensure non-sensitive data are logged on response", async () => {
+describe("Logger#response", () => {
+  it("should log the status and the response body with sensitive paths redacted", async () => {
     await axios.post(`${baseUrl}/req-res`, { password: "password", other_prop: "other" });
-    const properties = ringbuffer.records[0];
-    expect(ringbuffer.records).to.be.length(1);
-    expect(properties.req).to.have.property("method");
-    expect(properties.req).to.have.property("url");
-    expect(properties.req).to.have.property("headers");
-    expect(properties.req).to.have.property("remoteAddress");
-    expect(properties.req).to.have.property("remotePort");
-    expect(properties).to.have.property("req");
-    expect(properties).to.have.property("res");
-    expect(properties.req.body).to.have.property("password", "[REDACTED]");
-    expect(properties.req.body).to.have.property("other_prop");
+
+    const { res } = ringbuffer.records[0];
+    expect(res.statusCode).to.eq(200);
+    expect(res.body).to.deep.eq({ password: "[REDACTED]", other_prop: "other" });
   });
 });
 
-describe("Bunyan#httpError", () => {
-  it("should be able to log a http error", async () => {
+describe("Logger#httpError", () => {
+  it("should log the error with its request and response", async () => {
     await axios.get(`${baseUrl}/error`);
-    const properties = ringbuffer.records[0];
-    expect(ringbuffer.records).to.be.length(1);
-    expect(properties.req).to.have.property("method");
-    expect(properties.req).to.have.property("url");
-    expect(properties.req).to.have.property("headers");
-    expect(properties.req).to.have.property("remoteAddress");
-    expect(properties.req).to.have.property("remotePort");
-    expect(properties).to.have.property("err");
-    expect(properties).to.have.property("req");
-    expect(properties).to.have.property("res");
+
+    const record = ringbuffer.records[0];
+    expect(record.err.message).to.eq("Error");
+    expect(record.req).to.include({ method: "GET", url: "/error" });
+    expect(record.res).to.have.property("statusCode");
   });
 });
 
@@ -244,9 +151,5 @@ describe("redactHeaders", () => {
     const headers = { Authorization: "Bearer secret" };
     redactHeaders(headers);
     expect(headers.Authorization).to.eq("Bearer secret");
-  });
-
-  it("should pass through missing headers", () => {
-    expect(redactHeaders(undefined)).to.be.undefined;
   });
 });

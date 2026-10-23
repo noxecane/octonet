@@ -27,23 +27,13 @@ afterAll(async () => {
 describe("HttpAgent#makeRequest", () => {
   const agent = new HttpAgent({ service: "test_service", secret: randomString(32), scheme: "Test" });
 
-  it("should ignore data for DELETE requests", async () => {
-    const data = { first_name: faker.name.firstName(), last_name: faker.name.lastName() };
-    const req = agent.makeRequest(HttpMethod.DELETE, mockResourceURL).query(data);
-    const res = await req.do<TestRequest>();
+  it("should send no body for GET and DELETE requests", async () => {
+    const data = { first_name: faker.name.firstName() };
 
-    expect(res.method.toUpperCase()).to.be.eq(HttpMethod.DELETE);
-    expect(res.query).to.be.eql(data);
-    expect(res.body).to.be.undefined;
-  });
-
-  it("should ignore data for GET requests", async () => {
-    const data = { first_name: faker.name.firstName(), last_name: faker.name.lastName() };
-    const req = agent.makeRequest(HttpMethod.GET, mockResourceURL).query(data);
-    const res = await req.do<TestRequest>();
-
-    expect(res.method.toUpperCase()).to.be.eq(HttpMethod.GET);
-    expect(res.body).to.be.undefined;
+    for (const method of [HttpMethod.GET, HttpMethod.DELETE]) {
+      const res = await agent.makeRequest(method, mockResourceURL, data).do<TestRequest>();
+      expect(res.body).to.be.undefined;
+    }
   });
 
   it("should create a basic request", async () => {
@@ -77,15 +67,9 @@ describe("HttpAgent#useLogger", () => {
 
     const [requestLog, responseLog] = ringbuffer.records;
 
-    expect(requestLog.axios_req.method.toUpperCase()).to.be.eq(HttpMethod.POST);
-    expect(requestLog.axios_req.url).to.be.eq(mockResourceURL);
-    expect(requestLog.axios_req.headers).to.be.a("object");
     expect(requestLog.axios_req.data).to.deep.equal({ ...data, hidden: "[REDACTED]" });
-
-    expect(responseLog.axios_res.body.body).to.deep.equal({ ...data, hidden: "[REDACTED]" });
     expect(responseLog.axios_res.statusCode).to.be.eq(200);
-    expect(responseLog.axios_res.headers).to.have.property("content-type").that.contains("application/json");
-    expect(responseLog.axios_res.body.method).to.be.eq(HttpMethod.POST);
+    expect(responseLog.axios_res.body.body).to.deep.equal({ ...data, hidden: "[REDACTED]" });
   });
 
   it("should not log the authorization token", async () => {

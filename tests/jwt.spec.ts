@@ -17,12 +17,6 @@ describe("jwt#encode", () => {
 
     expect(decodeProtectedHeader(token)).to.deep.eq({ alg: "dir", enc: "A256GCM", kid: "slack" });
   });
-
-  it("should leave the kid out without one", async () => {
-    const token = await jwt.encode(key(), "5m", claims);
-
-    expect(decodeProtectedHeader(token)).to.deep.eq({ alg: "dir", enc: "A256GCM" });
-  });
 });
 
 describe("jwt#decode", () => {

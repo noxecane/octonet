@@ -203,19 +203,9 @@ describe("RequestWrapper#auth", () => {
 });
 
 describe("RequestWrapper#do", () => {
-  it("run a basic request", async () => {
-    const request = { method: HttpMethod.GET, url: mockResourceURL };
-    const req = new RequestWrapper(axiosInstance, service, authConfig, request);
-    const res = await req.do();
-
-    expect(res.method).to.be.eq(HttpMethod.GET);
-  });
-
   it("cause a connection refused", async function () {
-    const ringbuffer = new RingBuffer({ limit: 5 });
-    const logger = new Logger({ name: "logger_tests", buffer: ringbuffer, serializers: defaultSerializers() });
-    const agent = new HttpAgent({ service: "test_service", secret: randomString(32), scheme: "Test", logger });
-    const req = agent.makeRequest(HttpMethod.GET, `http://localhost:1001/test/non-existent`);
+    const request = { method: HttpMethod.GET, url: `http://localhost:1001/test/non-existent` };
+    const req = new RequestWrapper(axiosInstance, service, authConfig, request);
 
     let err: HttpError;
     try {

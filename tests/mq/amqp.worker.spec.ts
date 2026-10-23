@@ -1,9 +1,11 @@
 import "reflect-metadata";
 
+import { connect } from "amqplib";
 import { expect } from "chai";
 import { Container } from "inversify";
 import sinon from "sinon";
 
+import { AMQP_URL } from "../config";
 import { faker } from "../fake";
 import { Logger } from "../../src/logging/logger";
 import { defaultSerializers } from "../../src/logging/serializers";
@@ -11,7 +13,6 @@ import { Queue, QueueFactory, Workers } from "../../src/mq";
 import { sleep } from "../helpers";
 import { customSpy, doSpy, groupAfter, groupBefore, handlerAfter, handlerBefore } from "./helpers/amqp";
 
-const amqpURL = "amqp://localhost:5672";
 const logger = new Logger({
   name: "amqp.worker.tests",
   serializers: defaultSerializers(),
@@ -25,10 +26,10 @@ let customQueue: Queue<string>;
 
 beforeAll(async () => {
   const container = new Container();
-  factory = await QueueFactory.connect(amqpURL, logger);
+  factory = await QueueFactory.connect(AMQP_URL, logger);
 
   workers = new Workers(container);
-  await workers.start(amqpURL, logger);
+  await workers.start(AMQP_URL, logger);
 
   doQueue = await factory.queue("DO_JOB");
   customQueue = await factory.queue("CUSTOM_JOB");
@@ -37,6 +38,13 @@ beforeAll(async () => {
 afterAll(async () => {
   await factory.close();
   await workers.stop();
+
+  // remove the queues the workers and factory created
+  const conn = await connect(AMQP_URL);
+  const channel = await conn.createChannel();
+  await channel.deleteQueue("DO_JOB");
+  await channel.deleteQueue("CUSTOM_JOB");
+  await conn.close();
 });
 
 afterEach(() => {

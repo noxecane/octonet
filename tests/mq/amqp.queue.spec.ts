@@ -3,6 +3,7 @@ import "reflect-metadata";
 import { Channel, Connection, connect } from "amqplib";
 import { expect } from "chai";
 
+import { AMQP_URL } from "../config";
 import { faker } from "../fake";
 import { Logger } from "../../src/logging/logger";
 import { defaultSerializers } from "../../src/logging/serializers";
@@ -14,11 +15,10 @@ const logger = new Logger({
   serializers: defaultSerializers(),
   verbose: false
 });
-const amqpURL = "amqp://localhost:5672";
 
 describe("QueueFactory#connectionStatus", () => {
   it("should track connection status of AMQP", async () => {
-    const factory = await QueueFactory.connect(amqpURL, logger);
+    const factory = await QueueFactory.connect(AMQP_URL, logger);
 
     expect(factory.isConnected()).to.be.true;
 
@@ -35,7 +35,7 @@ describe("QueueFactory#queue", () => {
   const queueName = "MY_QUEUE";
 
   beforeAll(async () => {
-    conn = await connect(amqpURL);
+    conn = await connect(AMQP_URL);
     factory = await QueueFactory.connect(conn, logger);
     channel = await conn.createChannel();
   });
@@ -45,6 +45,7 @@ describe("QueueFactory#queue", () => {
   });
 
   afterAll(async () => {
+    await channel.deleteQueue(queueName);
     await conn.close();
   });
 

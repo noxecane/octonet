@@ -3,13 +3,13 @@ import { Container } from "inversify";
 import IORedis, { Redis } from "ioredis";
 import sinon from "sinon";
 
+import { REDIS_URL } from "../config";
 import { faker } from "../fake";
 import { Logger, defaultSerializers } from "../../src";
 import { JobRunner, acquireLock, releaseLock } from "../../src/jobs/runner";
 import { jumpBy, multiply, sleep, withTimePaused } from "../helpers";
 import { GROUP_NAME, dataSpy, normalSpy, querySpy } from "./helpers/decorators";
 
-const redisURL = "redis://localhost:6379";
 const logger = new Logger({
   name: "amqp.worker.tests",
   serializers: defaultSerializers(),
@@ -20,7 +20,7 @@ let redis: Redis;
 let runner: JobRunner;
 
 beforeAll(async () => {
-  redis = new IORedis(redisURL);
+  redis = new IORedis(REDIS_URL);
   runner = new JobRunner(new Container());
 });
 

@@ -5,6 +5,7 @@ import chaiAsPromised from "chai-as-promised";
 import ms from "ms";
 import { DiscardPolicy, JetStreamManager, NatsConnection, RetentionPolicy, StorageType, connect } from "nats";
 
+import { NATS_URL } from "../config";
 import { faker } from "../fake";
 import { StreamFactory } from "../../src/mq";
 import { getFromStream } from "../helpers";
@@ -16,7 +17,7 @@ let factory: StreamFactory;
 let manager: JetStreamManager;
 
 beforeAll(async () => {
-  conn = await connect();
+  conn = await connect({ servers: NATS_URL });
   factory = await StreamFactory.init(conn);
   manager = await conn.jetstreamManager();
 });

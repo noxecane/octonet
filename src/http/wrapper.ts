@@ -7,7 +7,7 @@ import { each } from "lodash";
 import qs from "qs";
 
 import { APIError, HttpError, NoAuthorizationTokenError, NoRequestIDError, TimeoutError } from "./errors";
-import { encode } from "./jwt";
+import { encode } from "../jwt";
 
 export interface AuthConfig {
   scheme: string;

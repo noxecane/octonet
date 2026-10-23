@@ -2,7 +2,7 @@ import "reflect-metadata";
 
 export * from "./http/agent";
 export * from "./http/errors";
-export * as jwt from "./http/jwt";
+export * as jwt from "./jwt";
 export * from "./http/wrapper";
 export * from "./logging/logger";
 export { LokiConfig } from "./logging/loki";

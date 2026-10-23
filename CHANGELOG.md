@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Added
+
+- **Per-system keys in `jwt`.** `encode(secret, timeout, data, { kid })` puts a key id in the token's protected
+  header. `decode` also accepts a map from `kid` to secret, or a lookup function, and picks the key by the
+  token's `kid`; a missing or unknown `kid` fails like a bad token. See
+  [docs/Authentication.md](docs/Authentication.md#several-systems-one-key-each).
+
+### Changed
+
+- **Breaking:** `jwt.decode` returns `{ claims, kid }` instead of the claims alone.
+- **Breaking:** the JWT helpers moved from `dist/http/jwt` to `dist/jwt`. Import them as `jwt` from
+  `@noxecane/octonet`; deep imports into `dist` aren't part of the API.
+- jose `^4` → `^5`. octonet stays CommonJS; jose 6 is ESM-only.
+
 ### Fixed
 
 - **Security, breaking: `RedisStore` issues a fresh random token for every session.** Tokens were

@@ -49,6 +49,6 @@ export function handlersOf(instance: object): Handler[] {
   return (subscriptions.get(constructor) ?? []).map(({ subject, method }) => ({
     stream: name,
     subject,
-    handle: (data: any) => instance[method](data)
+    handle: instance[method].bind(instance)
   }));
 }

@@ -3,7 +3,6 @@ import crypto from "crypto";
 import { Redis } from "ioredis";
 import ms from "ms";
 
-import { dateReviver } from "../strings";
 import { AsyncNullable, TokenStore } from "./store";
 
 interface Session<T> {
@@ -93,7 +92,7 @@ export class RedisStore implements TokenStore {
 
   private async load<T>(token: string): Promise<Session<T> | null> {
     const result = await this.redis.get(token);
-    return result ? JSON.parse(result, dateReviver) : null;
+    return result ? JSON.parse(result) : null;
   }
 }
 

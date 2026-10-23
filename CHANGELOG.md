@@ -24,6 +24,15 @@
   - Handler middleware is gone.
   - A deleted stream or consumer no longer crashes the process.
   - Apps connect with `@nats-io/transport-node` (nats 3) and need `"moduleResolution": "node16"` or newer.
+- **Breaking: JSON dates are no longer converted.** `HttpAgent` responses, `RedisStore` sessions and NATS
+  messages used to turn any ISO-looking string into a `Date`, including invalid dates and date-only strings in
+  plain text fields. They now stay strings, as in standard JSON; convert them where you need a `Date`.
+
+- **Breaking:** `jwt.decode` returns `{ claims, kid }` instead of the claims alone.
+- **Breaking:** the JWT helpers moved from `dist/http/jwt` to `dist/jwt`. Import them as `jwt` from
+  `@noxecane/octonet`; deep imports into `dist` aren't part of the API.
+- jose `^4` → `^5`. octonet stays CommonJS; jose 6 is ESM-only.
+
 ### Fixed
 
 - **Security, breaking: `RedisStore` issues a fresh random token for every session.** Tokens were

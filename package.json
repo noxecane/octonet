@@ -24,7 +24,6 @@
   ],
   "homepage": "https://github.com/noxecane/octonet#readme",
   "devDependencies": {
-    "@types/amqplib": "^0.10.1",
     "@types/bunyan": "^1.8.8",
     "@types/chai": "^4.3.4",
     "@types/chai-as-promised": "^7.1.5",
@@ -49,7 +48,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "amqplib": "^0.10.3",
     "axios": "^1.20.0",
     "bunyan": "^1.8.15",
     "form-data": "^4.0.6",

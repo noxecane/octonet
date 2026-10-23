@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+
+- **Breaking:** AMQP support (`QueueFactory`, `Queue`, `Workers`, `@worker`, `@command`) and the `amqplib`
+  dependency. Use amqplib directly if you need RabbitMQ.
+
 ## 0.3.0
 
 ### Added

@@ -6,6 +6,9 @@
 
 - **Breaking:** AMQP support (`QueueFactory`, `Queue`, `Workers`, `@worker`, `@command`) and the `amqplib`
   dependency. Use amqplib directly if you need RabbitMQ.
+- **Breaking:** jobs (`@cron`, `@job`, `@query`, `hourly`/`daily`/`weekly`/`monthly`, `JobRunner`,
+  `RedisQueue`) and the `node-cron` dependency, along with `wrapHandler` from the retry helpers. Use a
+  dedicated job library instead.
 
 ## 0.3.0
 

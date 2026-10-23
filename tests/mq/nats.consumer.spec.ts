@@ -5,6 +5,7 @@ import { Container } from "inversify";
 import { JetStreamManager, NatsConnection, StorageType, connect } from "nats";
 import sinon from "sinon";
 
+import { NATS_URL } from "../config";
 import { faker } from "../fake";
 import { Consumers, Logger, NatsPublisher, defaultSerializers } from "../../src";
 import { repeat, sleep } from "../helpers";
@@ -30,7 +31,7 @@ let jm: JetStreamManager;
 
 beforeAll(async () => {
   const container = new Container();
-  natsConn = await connect();
+  natsConn = await connect({ servers: NATS_URL });
   jm = await natsConn.jetstreamManager();
 
   // create the stream to listen to

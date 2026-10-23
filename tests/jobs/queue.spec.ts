@@ -3,10 +3,10 @@ import "reflect-metadata";
 import { expect, use } from "chai";
 
 import Redis from "ioredis";
+import { REDIS_URL } from "../config";
 import { RedisQueue } from "../../src/jobs/queue";
 import chaiAsPromised from "chai-as-promised";
 
-const redisURL = "redis://localhost:6379";
 const queueName = "numbers_game";
 let redis: Redis;
 let queue: RedisQueue<number>;
@@ -14,7 +14,7 @@ let queue: RedisQueue<number>;
 use(chaiAsPromised);
 
 beforeAll(() => {
-  redis = new Redis(redisURL);
+  redis = new Redis(REDIS_URL);
   queue = new RedisQueue(queueName, redis, 0);
 });
 

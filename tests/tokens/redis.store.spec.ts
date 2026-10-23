@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import IORedis, { Redis } from "ioredis";
 
+import { REDIS_URL } from "../config";
 import { faker } from "../fake";
 import { RedisStore } from "../../src";
 import { randomString, sleep } from "../helpers";
@@ -11,7 +12,7 @@ let store: RedisStore;
 beforeAll(async () => {
   const secret = randomString(32);
 
-  redis = new IORedis();
+  redis = new IORedis(REDIS_URL);
   store = new RedisStore(secret, redis);
 });
 

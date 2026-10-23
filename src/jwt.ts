@@ -28,7 +28,7 @@ export interface Decoded<T> {
  * @param secret secret for signing and encrypting
  * @param timeout how long before the JWT expires. This is intentionally required
  * @param data data to encoode and encrypt
- * @param opts optional key id for the secret(claude: encode options is encode iptions not kid)
+ * @param opts encoding options, e.g. `kid`
  * @returns encrypted JWT token
  */
 export function encode(secret: Uint8Array, timeout: string, data: any, opts: EncodeOptions = {}) {

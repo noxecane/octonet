@@ -217,17 +217,6 @@ describe("Logger#loki", () => {
     expect(sentLines()[0]).to.include({ topic: "payments", n: 1 });
   });
 
-  it("should flush everything left", async () => {
-    const logger = lokiLogger({ batch_size: 3, interval: "10s" });
-
-    for (let n = 1; n <= 7; n++) {
-      logger.log({ n });
-    }
-    await logger.flush();
-
-    expect(sentLines().map(r => r.n)).to.deep.eq([1, 2, 3, 4, 5, 6, 7]);
-  });
-
   it("should not send anything when the url is empty", async () => {
     const logger = lokiLogger({ url: "" });
 

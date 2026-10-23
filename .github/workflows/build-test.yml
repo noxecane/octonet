@@ -11,7 +11,7 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    # the services below, for tests/config.ts
+    # the redis service and the NATS step below, for tests/config.ts
     env:
       REDIS_URL: redis://localhost:6379/4
       NATS_URL: nats://localhost:4222
@@ -26,10 +26,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      nats:
-        image: noxecane/nats-js-image:latest
-        ports:
-        - 4222:4222
 
     steps:
     - name: Checkout source code
@@ -54,6 +50,18 @@ jobs:
 
     - name: Build
       run: yarn build
-    
+
+    # a step rather than a service: service containers can't pass -js, and
+    # nats 3's consumers need a JetStream server of 2.9.4 or newer
+    - name: Start NATS with JetStream
+      run: |
+        docker run -d --name nats -p 4222:4222 -p 8222:8222 nats:2 -js -m 8222
+        for i in $(seq 1 30); do
+          curl -sf "http://localhost:8222/healthz?js-enabled-only=true" && exit 0
+          sleep 1
+        done
+        docker logs nats
+        exit 1
+
     - name: Test
       run: yarn test

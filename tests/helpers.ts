@@ -1,7 +1,4 @@
-import { JSONCodec, JetStreamManager } from "nats";
-
 import crypto from "crypto";
-import { dateReviver } from "../src/strings";
 import { promisify } from "util";
 
 /**
@@ -24,22 +21,3 @@ export const asyncRandomString = promisify<number, string>(randomString);
  * @param delay how long in milliseconds to wait
  */
 export const sleep = promisify(setTimeout);
-
-/**
- * Run async job `fn` `n` times.
- * @param n number of times to run it
- * @param fn job to run
- */
-export async function repeat(n: number, fn: (i?: number) => Promise<any>): Promise<any[]> {
-  const jobs = Array.from({ length: n }).map((_x, i) => fn(i));
-  return Promise.all(jobs);
-}
-
-
-export async function getFromStream<T>(manager: JetStreamManager, topic: string) {
-  const [stream] = topic.split(".");
-  const msg = await manager.streams.getMessage(stream, { last_by_subj: topic });
-
-  // @ts-ignore nats typing is problematic here
-  return JSONCodec<T>(dateReviver).decode(msg.data);
-}

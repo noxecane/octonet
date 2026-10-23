@@ -2,22 +2,19 @@
   "compilerOptions": {
     "target": "ES2024",
     "declaration": true,
-    "module": "commonjs",
-    // dom: nats 2's typings use DOM's TextEncoder/TextDecoder types
-    "lib": ["es2024", "dom"],
+    "module": "node16",
+    "lib": ["es2024"],
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": false,
     "noImplicitAny": false,
     "noUnusedLocals": true,
-    "moduleResolution": "node",
-    "baseUrl": "./src",
+    "moduleResolution": "node16",
     "typeRoots": ["./node_modules/@types"],
     "types": ["jest", "node"],
     "esModuleInterop": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "experimentalDecorators": true
   },
   "exclude": ["src/**/*.spec.ts"],
   "include": ["types/**/*.d.ts", "src/**/*"]

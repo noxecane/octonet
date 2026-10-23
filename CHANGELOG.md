@@ -11,6 +11,23 @@
 
 ### Changed
 
+- **Breaking: NATS moves to nats 3 and plain functions.** See [docs/NATS.md](docs/NATS.md).
+  - `ensureStream(nats, name, { type: "log", retention } | { type: "broadcast", buffer })` replaces
+    `StreamFactory`, and takes an optional `duplicate_window`.
+  - `publish(nats, subject, data, { msgID })` replaces `Stream` and `NatsPublisher`. It sends the caller's
+    `msgID` (none if not given) instead of a random one that defeated duplicate detection.
+  - `consume(nats, [instances], { app, logger, ... })` replaces `Consumers`. Handlers are still
+    `@stream`/`@subscribe` classes, but the app passes built instances: there's no Inversify container.
+  - Any error a handler throws now redelivers the message, up to `max_deliver` attempts (default 5), then it's
+    dropped and logged. Before, only `RetryError` redelivered (and stalled the consumer) while other errors
+    dropped the message. `RetryError` is gone; to give up on a message, catch and return.
+  - Handler middleware is gone.
+  - A deleted stream or consumer no longer crashes the process.
+  - Apps connect with `@nats-io/transport-node` (nats 3) and need `"moduleResolution": "node16"` or newer.
+- **Breaking: JSON dates are no longer converted.** `HttpAgent` responses, `RedisStore` sessions and NATS
+  messages used to turn any ISO-looking string into a `Date`, including invalid dates and date-only strings in
+  plain text fields. They now stay strings, as in standard JSON; convert them where you need a `Date`.
+
 - **Breaking:** `jwt.decode` returns `{ claims, kid }` instead of the claims alone.
 - **Breaking:** the JWT helpers moved from `dist/http/jwt` to `dist/jwt`. Import them as `jwt` from
   `@noxecane/octonet`; deep imports into `dist` aren't part of the API.
@@ -34,8 +51,9 @@
 - **Breaking:** jobs (`@cron`, `@job`, `@query`, `hourly`/`daily`/`weekly`/`monthly`, `JobRunner`,
   `RedisQueue`) and the `node-cron` dependency, along with `wrapHandler` from the retry helpers. Use a
   dedicated job library instead.
-- **Breaking:** the retry helpers `retryOnError`, `retryOnRequest` and `ExitError`. `RetryError` stays, as
-  NATS consumers use it to ask for redelivery.
+- **Breaking:** the retry helpers `retryOnError`, `retryOnRequest` and `ExitError`, and `RetryError` (see the
+  NATS change above).
+- **Breaking:** the `inversify`, `reflect-metadata` and `nats` (2) dependencies.
 
 ## 0.3.0
 

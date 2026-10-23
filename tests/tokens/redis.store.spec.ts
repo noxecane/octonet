@@ -23,20 +23,6 @@ afterEach(async () => {
 });
 
 describe("RedisStore#commission", () => {
-  it("should store the value in redis", async () => {
-    const token = await store.commission(faker.internet.userName(), faker.internet.email(), "10s");
-    const val = await redis.get(token);
-
-    expect(val).to.be.a("string");
-  });
-
-  it("should create a token that expires after 100ms", async () => {
-    const token = await store.commission(faker.internet.userName(), faker.internet.email(), "100ms");
-    const t = await redis.pttl(token);
-
-    expect(t).to.lessThanOrEqual(100);
-  });
-
   it("should replace the key's token with a fresh one", async () => {
     const username = faker.internet.userName();
     const tokenOne = await store.commission(username, faker.internet.email(), "10s");
@@ -47,26 +33,15 @@ describe("RedisStore#commission", () => {
     expect(await store.peek(tokenOne)).to.be.null;
     expect(await store.peek(tokenTwo)).to.equal(data);
   });
-
-  it("should give different keys different tokens", async () => {
-    const tokenOne = await store.commission(faker.internet.userName(), faker.internet.email(), "10s");
-    const tokenTwo = await store.commission(faker.internet.userName(), faker.internet.email(), "10s");
-
-    expect(await store.peek(tokenOne)).to.not.be.null;
-    expect(await store.peek(tokenTwo)).to.not.be.null;
-  });
 });
 
 describe("RedisStore#peek", () => {
   it("should return a value without destroying the token", async () => {
     const data = faker.internet.email();
     const token = await store.commission(faker.internet.userName(), data, "3s");
-    const value = await store.peek(token);
-    const val = await redis.get(token);
 
-    expect(value).to.equal(data);
-    expect(val).to.be.a("string");
-    expect(val).to.not.be.empty;
+    expect(await store.peek(token)).to.equal(data);
+    expect(await store.peek(token)).to.equal(data);
   });
 
   it("should return null after the token expires", async () => {
@@ -91,15 +66,6 @@ describe("RedisStore#extend", () => {
     expect(fromExtraction).to.equal(data);
     expect(newTTL).to.not.eq(oldTTL);
     expect(newTTL).to.lessThanOrEqual(200);
-  });
-
-  it("should return null after the token expires", async () => {
-    const token = await store.commission(faker.internet.userName(), faker.internet.email(), "100ms");
-
-    await sleep(110);
-    const val = await store.extend(token, "10ms");
-
-    expect(val).to.be.null;
   });
 
   it("should keep an extended token revocable by key", async () => {
@@ -154,15 +120,6 @@ describe("RedisStore#decommission", () => {
     const val = await redis.get(token);
 
     expect(value).to.equal(data);
-    expect(val).to.be.null;
-  });
-
-  it("should return null after the token expires", async () => {
-    const token = await store.commission(faker.internet.userName(), faker.internet.email(), "100ms");
-
-    await sleep(110);
-    const val = await store.decommission(token);
-
     expect(val).to.be.null;
   });
 

@@ -34,11 +34,11 @@ The **RedisStore** module **manages user sessions** and has 4 main utility funct
 
 ### **commision**_<T = any>_**(key**: _string_, **val**: _T_, **time**: _string_**)**: _Promise\<string>_
 
-The _commission_ function creates a cryptographic token using a secret and a specified key, and saves the data for that key in Redis. The saved data can be accessed via the token.
+The _commission_ function creates a random token for a key and saves the data for it in Redis. The saved data can be accessed via the token. A key has at most one live token: a new one replaces the previous token, which stops working. `reset` and `revoke` find the token from the key, so you can change or end a session without knowing its token. Needs Redis 6.2 or newer.
 
 #### Parameters
 
-- **key:** A unique key string for generating the token
+- **key:** A unique key for the session, e.g. a user id
 - **value:** The value to be referenced with the token. Typically, this is the session object
 - **time:** The lifespan (expiry time) of the token, formatted in accordance with specifications contained in the [ms](https://github.com/vercel/ms#readme) library (see reference section at the end of this document).
 
@@ -142,7 +142,6 @@ Next, we create and Octonet's `RedisStore` instance as shown below
 import { RedisStore } from "@noxecane/octonet";
 import Redis from "./redis.config";
 
-const SECRET = "my_secret"; // use the secret specified in your .env file
 const key = "user@example.com"; // unique key
 
 // sample session object
@@ -152,7 +151,7 @@ const session = {
   role: "user"
 };
 
-const redisStore: RedisStore = new RedisStore(SECRET, Redis);
+const redisStore: RedisStore = new RedisStore(Redis);
 
 // sample immediately invoking start function for the purpose of this example
 (async function () {

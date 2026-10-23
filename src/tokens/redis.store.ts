@@ -6,65 +6,97 @@ import ms from "ms";
 import { dateReviver } from "../strings";
 import { AsyncNullable, TokenStore } from "./store";
 
+interface Session<T> {
+  key: string;
+  value: T;
+}
+
+// run `command` on KEYS[1] only while it still points at ARGV[1], so a newer
+// session for the same key is never touched
+const ifIndexIs = (command: string) => `
+  if redis.call("get", KEYS[1]) == ARGV[1] then
+    return redis.call("${command}", KEYS[1], unpack(ARGV, 2))
+  end
+  return 0
+`;
+
+/**
+ * Sessions on redis: one random token per key, so a new session for a key
+ * replaces the old one. An index from key to token lets `reset` and `revoke`
+ * work with only the key. Needs Redis 6.2 or newer.
+ */
 export class RedisStore implements TokenStore {
-  constructor(private secret: string, private redis: Redis) {}
+  constructor(private redis: Redis) {}
 
   async commision<T = any>(key: string, val: T, time: string): Promise<string> {
-    const token = crypto.createHmac("sha256", this.secret).update(key).digest("hex");
+    const token = crypto.randomBytes(32).toString("hex");
+    const ttl = ms(time);
 
-    const content = JSON.stringify(val);
-    await this.redis.set(token, content, "PX", ms(time));
+    // one transaction, so a session is never live without its index entry
+    const [, [, previous]] = await this.redis
+      .multi()
+      .set(token, JSON.stringify({ key, value: val }), "PX", ttl)
+      .set(indexKey(key), token, "PX", ttl, "GET")
+      .exec();
+
+    if (previous) {
+      await this.redis.del(previous as string);
+    }
 
     return token;
   }
 
   async peek<T = any>(token: string): AsyncNullable<T> {
-    const result = await this.redis.get(token);
-    if (!result) {
-      return null;
-    }
-
-    return JSON.parse(result, dateReviver);
+    const session = await this.load<T>(token);
+    return session ? session.value : null;
   }
 
   async extend<T = any>(token: string, time: string): AsyncNullable<T> {
-    const result = await this.redis.get(token);
-    if (!result) {
+    const session = await this.load<T>(token);
+    if (!session) {
       return null;
     }
 
-    await this.redis.pexpire(token, ms(time));
+    const ttl = ms(time);
+    await this.redis.pexpire(token, ttl);
+    await this.redis.eval(ifIndexIs("pexpire"), 1, indexKey(session.key), token, ttl);
 
-    return JSON.parse(result, dateReviver);
+    return session.value;
   }
 
   async reset<T = any>(key: string, newVal: T): Promise<void> {
-    const token = crypto.createHmac("sha256", this.secret).update(key).digest("hex");
+    const token = await this.redis.get(indexKey(key));
+    if (!token) return;
 
-    // make sure the token exists
-    const result = await this.redis.get(token);
-    if (!result) return;
-
-    const content = JSON.stringify(newVal);
-    const ttl = await this.redis.pttl(token);
-
-    await this.redis.set(token, content, "PX", ttl);
+    await this.redis.set(token, JSON.stringify({ key, value: newVal }), "KEEPTTL", "XX");
   }
 
   async decommission<T = any>(token: string): AsyncNullable<T> {
-    const result = await this.redis.get(token);
-    if (!result) {
+    const session = await this.load<T>(token);
+    if (!session) {
       return null;
     }
 
     await this.redis.del(token);
+    await this.redis.eval(ifIndexIs("del"), 1, indexKey(session.key), token);
 
-    return JSON.parse(result, dateReviver);
+    return session.value;
   }
 
   async revoke(key: string): Promise<void> {
-    const token = crypto.createHmac("sha256", this.secret).update(key).digest("hex");
+    const token = await this.redis.get(indexKey(key));
+    if (!token) return;
 
     await this.redis.del(token);
+    await this.redis.eval(ifIndexIs("del"), 1, indexKey(key), token);
   }
+
+  private async load<T>(token: string): Promise<Session<T> | null> {
+    const result = await this.redis.get(token);
+    return result ? JSON.parse(result, dateReviver) : null;
+  }
+}
+
+function indexKey(key: string) {
+  return `octonet:session:${key}`;
 }

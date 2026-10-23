@@ -4,16 +4,14 @@ import IORedis, { Redis } from "ioredis";
 import { REDIS_URL } from "../config";
 import { faker } from "../fake";
 import { RedisStore } from "../../src";
-import { randomString, sleep } from "../helpers";
+import { sleep } from "../helpers";
 
 let redis: Redis;
 let store: RedisStore;
 
 beforeAll(async () => {
-  const secret = randomString(32);
-
   redis = new IORedis(REDIS_URL);
-  store = new RedisStore(secret, redis);
+  store = new RedisStore(redis);
 });
 
 afterAll(async () => {
@@ -39,12 +37,23 @@ describe("RedisStore#commission", () => {
     expect(t).to.lessThanOrEqual(100);
   });
 
-  it("should create same token for the same key", async () => {
+  it("should replace the key's token with a fresh one", async () => {
     const username = faker.internet.userName();
     const tokenOne = await store.commision(username, faker.internet.email(), "10s");
-    const tokenTwo = await store.commision(username, faker.internet.email(), "10s");
+    const data = faker.internet.email();
+    const tokenTwo = await store.commision(username, data, "10s");
 
-    expect(tokenOne).to.equal(tokenTwo);
+    expect(tokenTwo).to.not.equal(tokenOne);
+    expect(await store.peek(tokenOne)).to.be.null;
+    expect(await store.peek(tokenTwo)).to.equal(data);
+  });
+
+  it("should give different keys different tokens", async () => {
+    const tokenOne = await store.commision(faker.internet.userName(), faker.internet.email(), "10s");
+    const tokenTwo = await store.commision(faker.internet.userName(), faker.internet.email(), "10s");
+
+    expect(await store.peek(tokenOne)).to.not.be.null;
+    expect(await store.peek(tokenTwo)).to.not.be.null;
   });
 });
 
@@ -92,6 +101,17 @@ describe("RedisStore#extend", () => {
 
     expect(val).to.be.null;
   });
+
+  it("should keep an extended token revocable by key", async () => {
+    const key = faker.internet.userName();
+    const token = await store.commision(key, faker.internet.email(), "100ms");
+
+    await store.extend(token, "3s");
+    await sleep(150);
+    await store.revoke(key);
+
+    expect(await store.peek(token)).to.be.null;
+  });
 });
 
 describe("RedisStore#reset", () => {
@@ -118,6 +138,12 @@ describe("RedisStore#reset", () => {
 
     expect(newTTL).to.lessThanOrEqual(50);
   });
+
+  it("should do nothing for a key without a token", async () => {
+    await store.reset(faker.internet.userName(), faker.internet.email());
+
+    expect(await redis.dbsize()).to.equal(0);
+  });
 });
 
 describe("RedisStore#decommission", () => {
@@ -139,6 +165,13 @@ describe("RedisStore#decommission", () => {
 
     expect(val).to.be.null;
   });
+
+  it("should leave nothing behind for the key", async () => {
+    const token = await store.commision(faker.internet.userName(), faker.internet.email(), "3s");
+    await store.decommission(token);
+
+    expect(await redis.dbsize()).to.equal(0);
+  });
 });
 
 describe("RedisStore#revoke", () => {
@@ -149,5 +182,25 @@ describe("RedisStore#revoke", () => {
     const val = await redis.get(token);
 
     expect(val).to.be.null;
+    expect(await redis.dbsize()).to.equal(0);
+  });
+
+  it("should revoke the latest token after a new session", async () => {
+    const key = faker.internet.userName();
+    await store.commision(key, faker.internet.email(), "3s");
+    const latest = await store.commision(key, faker.internet.email(), "3s");
+
+    await store.revoke(key);
+
+    expect(await store.peek(latest)).to.be.null;
+  });
+
+  it("should leave other keys' tokens alone", async () => {
+    const other = await store.commision(faker.internet.userName(), faker.internet.email(), "3s");
+    await store.commision("revoked", faker.internet.email(), "3s");
+
+    await store.revoke("revoked");
+
+    expect(await store.peek(other)).to.not.be.null;
   });
 });

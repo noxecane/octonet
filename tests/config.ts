@@ -17,5 +17,4 @@ function required(key: string) {
 }
 
 export const REDIS_URL = required("REDIS_URL");
-export const AMQP_URL = required("AMQP_URL");
 export const NATS_URL = required("NATS_URL");

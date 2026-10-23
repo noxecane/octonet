@@ -8,7 +8,7 @@
 octonet is a library that provides utility functions for building microservices such as:
 
 - Interservice communication (via REST)
-- Subscribing to events from RabbitMQ queues and NATS servers.
+- Subscribing to events from NATS servers.
 - Logging
 - Authentication
 
@@ -68,7 +68,6 @@ Below are links to detailed explanations to the various features of Octonet as w
 
 - [HTTP (Interservice Comunication)](docs/HTTP.md)
 - [NatsConsumer (subscribing to Nats topics)](docs/Consumer.md)
-- [QueueManager (subscribing to RabbitMQ queues)](docs/Manager.md)
 - [Authentication](docs/Authentication.md)
 - [Logging](docs/Logging.md)
 
@@ -79,8 +78,6 @@ The following links would further aid the understanding of Octonet
 - [Inversify](https://github.com/inversify/InversifyJS#readme)
 - [Reflect Metadata](https://rbuckton.github.io/reflect-metadata/)
 - [Typescript Decorators](https://www.typescriptlang.org/docs/handbook/decorators.html)
-- [AMPQ Client docs for NodeJs](http://www.squaremobius.net/amqp.node/channel_api.html)
 - [Bunyan](https://github.com/trentm/node-bunyan#readme)
 - [Axios](https://axios-http.com/docs/intro)
-- [RabbitMQ messaging queues](https://www.rabbitmq.com/)
 - [NATS Messaging](https://docs.nats.io/nats-concepts/what-is-nats)

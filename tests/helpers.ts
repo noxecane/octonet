@@ -1,7 +1,6 @@
 import { JSONCodec, JetStreamManager } from "nats";
 import sinon, { SinonFakeTimers } from "sinon";
 
-import { Channel } from "amqplib";
 import crypto from "crypto";
 import { dateReviver } from "../src/strings";
 import ms from "ms";
@@ -61,18 +60,6 @@ export async function repeat(n: number, fn: (i?: number) => Promise<any>): Promi
   return Promise.all(jobs);
 }
 
-export async function popFromQueue<T>(channel: Channel, queue: string): Promise<T | null> {
-  const result = await channel.get(queue, { noAck: true });
-  if (typeof result === "boolean") {
-    return null;
-  }
-
-  return JSON.parse(result.content.toString(), dateReviver);
-}
-
-export async function drainQueue(channel: Channel, queue: string): Promise<void> {
-  await channel.purgeQueue(queue);
-}
 
 export async function getFromStream<T>(manager: JetStreamManager, topic: string) {
   const [stream] = topic.split(".");

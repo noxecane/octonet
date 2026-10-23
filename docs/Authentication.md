@@ -190,59 +190,69 @@ const redisStore: RedisStore = new RedisStore(Redis);
 
 ### System session management (headless requests)
 
-The JWT module is used for **system session management**.
-It is used in the encoding and decoding of JSON Web Tokens(JWTs)  
-See example below
+The JWT module encrypts and decrypts the tokens services use to call each other. Import it as `jwt` from
+`@noxecane/octonet`.
 
-```javascript
+```ts
 import { jwt } from "@noxecane/octonet";
 
-const mySecret = "12345678123456781234567812345678"; //32 character string
-const payload = {
-  email: "email@example.com",
-  username: "noxecane"
-};
-const encodedSecret: Uint8Array = new TextEncoder().encode(mySecret);
+const secret = new TextEncoder().encode("12345678123456781234567812345678"); // 32 bytes
 
-(async () => {
-  const token = await jwt.encode(encodedSecret, "1h", payload);
-
-  console.log(token); //logs jwt token
-
-  const data = await jwt.decode(encodedSecret, token);
-
-  console.log(data); //should be equal to payload
-})();
+const token = await jwt.encode(secret, "5m", { email: "email@example.com" });
+const { claims } = await jwt.decode(secret, token); // claims equal the data passed in
 ```
+
+#### Several systems, one key each
+
+When several systems call one service, give each system its own key and a key id (`kid`). A system signs
+with its own key and puts its `kid` in the token; the receiving service holds every system's key and picks
+the right one by `kid`. A system then can't produce a token that passes as another system's.
+
+```ts
+// in the "slack" system: it only holds its own key
+const token = await jwt.encode(slackKey, "5m", claims, { kid: "slack" });
+
+// in the receiving service: every system's key, by kid
+const { claims, kid } = await jwt.decode({ slack: slackKey, web: webKey }, token);
+// kid is "slack"; it is authenticated along with the claims
+```
+
+The receiving service can still create tokens for any system, since it holds every key. That's fine when it's
+the authority anyway. If you have several independent verifiers, or a verifier you trust less than the
+systems, asymmetric keys (signed JWS) are worth their extra complexity.
 
 ### Functions
 
-### **encode(secret**: _Uint8Array_, **timeout**: _string_, **data**: _any_): _Promise\<string>_
+### **encode(secret**: _Uint8Array_, **timeout**: _string_, **data**: _any_, **opts?**: _{ kid?: string }_): _Promise\<string>_
 
-It creates a new jwt.
+Creates an encrypted JWT.
 
 #### Parameters
 
-- **secret**: An encoded secret.
-- **timeout**: Amount of time after which the token should expire. It is a string in the format `${number}${unit}`. Some valid unit includes
-  - s: second
-  - h: hours
-  - d:days
-- **data**: The data we want to encode into the jwt.
+- **secret**: a 32-byte key.
+- **timeout**: how long until the token expires, as `${number}${unit}`, e.g. `30s`, `5m`, `1h`, `1d`.
+- **data**: the claims to put in the token.
+- **opts.kid**: key id of `secret`, put in the token's protected header.
 
 #### Returns
 
-- It returns a jwt(string)
+- The token (string).
 
-### **decode(secret**: _Uint8Array_, **token**: _string_):_Promise\<any>_
+### **decode(keys**: _DecodeKeys_, **token**: _string_): _Promise\<{ claims, kid? }>_
 
-Decodes a JWT.
+Decrypts and checks a token made by `encode`.
 
-#### Parameter
+#### Parameters
 
-- **secret**: An encoded secret. Should be equal to the secret used to encode.,
-- **token**: JWT gotten after encryption
+- **keys**: one of
+  - the secret used to encode (any `kid` is ignored);
+  - a map from `kid` to secret;
+  - a function that returns the secret for a `kid`, or `undefined`.
+
+  With a map or a function, a token without a `kid`, or with an unknown one, fails like a bad token.
+- **token**: the token.
 
 #### Returns
 
-- Data which is encoded into the Token.
+- `claims`: the data passed to `encode`.
+- `kid`: the token's key id, if it had one.

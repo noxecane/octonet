@@ -9,7 +9,7 @@ import chaiAsPromised from "chai-as-promised";
 import { faker } from "../fake";
 import { HttpAgent, HttpMethod } from "../../src/http/agent";
 import { APIError, HttpError, NoAuthorizationTokenError, NoRequestIDError, TimeoutError } from "../../src/http/errors";
-import * as jwt from "../../src/http/jwt";
+import { jwt } from "../../src";
 import { RequestWrapper } from "../../src/http/wrapper";
 import { Logger } from "../../src/logging/logger";
 import { defaultSerializers } from "../../src/logging/serializers";
@@ -181,7 +181,7 @@ describe("RequestWrapper#auth", () => {
     expect(res.headers.authorization).to.match(/Test\s.+/);
 
     const [, token] = res.headers.authorization.split(" ");
-    const session = await jwt.decode(secret, token);
+    const { claims: session } = await jwt.decode(secret, token);
 
     expect(session).to.be.eql(data);
   });
@@ -195,7 +195,7 @@ describe("RequestWrapper#auth", () => {
     expect(res.headers.authorization).to.match(/Test\s.+/);
 
     const [, token] = res.headers.authorization.split(" ");
-    const session = await jwt.decode(secret, token);
+    const { claims: session } = await jwt.decode(secret, token);
 
     expect(session.service).to.be.eq(service);
     expect(Date.parse(session.request_time)).to.not.be.NaN;

@@ -24,14 +24,13 @@ The following are required for the best use of Octonet:
   - NodeJs (v14 or higher)
   - Yarn
   - Typescript (v4.4 or higher)
-- A basic understanding of dependency injection with Inversify
 
 ### Installation
 
 To install Octonet, run the following command in your terminal
 
 ```bash
-yarn install --save @noxecane/octonet reflect-metadata
+yarn install --save @noxecane/octonet
 ```
 
 To upgrade to a specific version run this command
@@ -46,18 +45,15 @@ To upgrade to latest version run this command
 yarn upgrade @noxecane/octonet --latest
 ```
 
-> Note: Octonet requires Typescript (>= v4.4), as well as the `Decorator` experimental feature. Therefore, the following config options should be present in your `tsconfig.json` file:
+> Note: Octonet's NATS handlers use decorators, and its typings need Node-style module resolution. Your
+> `tsconfig.json` needs:
 
 ```json
 {
   "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["es2017", "esnext.asynciterable", "dom"],
-    "types": ["reflect-metadata"],
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "module": "node16",
+    "moduleResolution": "node16",
+    "experimentalDecorators": true
   }
 }
 ```
@@ -67,7 +63,7 @@ yarn upgrade @noxecane/octonet --latest
 Below are links to detailed explanations to the various features of Octonet as well as practical examples:
 
 - [HTTP (Interservice Comunication)](docs/HTTP.md)
-- [NatsConsumer (subscribing to Nats topics)](docs/Consumer.md)
+- [NATS (streams, publishing and consuming)](docs/NATS.md)
 - [Authentication](docs/Authentication.md)
 - [Logging](docs/Logging.md)
 
@@ -75,8 +71,6 @@ Below are links to detailed explanations to the various features of Octonet as w
 
 The following links would further aid the understanding of Octonet
 
-- [Inversify](https://github.com/inversify/InversifyJS#readme)
-- [Reflect Metadata](https://rbuckton.github.io/reflect-metadata/)
 - [Typescript Decorators](https://www.typescriptlang.org/docs/handbook/decorators.html)
 - [Bunyan](https://github.com/trentm/node-bunyan#readme)
 - [Axios](https://axios-http.com/docs/intro)

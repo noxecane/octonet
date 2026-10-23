@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "ES2024",
     "declaration": true,
     "module": "commonjs",
-    "lib": ["es2017", "esnext.asynciterable", "dom"],
+    // dom: nats 2's typings use DOM's TextEncoder/TextDecoder types
+    "lib": ["es2024", "dom"],
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
@@ -13,7 +14,7 @@
     "moduleResolution": "node",
     "baseUrl": "./src",
     "typeRoots": ["./node_modules/@types"],
-    "types": ["reflect-metadata", "jest", "node"],
+    "types": ["jest", "node"],
     "esModuleInterop": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true

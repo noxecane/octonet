@@ -1,111 +1,191 @@
-# Logger
+# Logging
 
-The Logger is a feature in Octonet which provides utility functions that enables logging for the purpose of distributed tracing, metrics collection or other purposes. It utilises the [Bunyan](https://github.com/trentm/node-bunyan#readme) library for its functionalities,as well as the [Express](https://expressjs.com/en/api.html#express) [Request](https://expressjs.com/en/api.html#req) and [Response](https://expressjs.com/en/api.html#res) objects as inputs.
+`Logger` writes JSON lines with [Bunyan](https://github.com/trentm/node-bunyan#readme), in one format every
+service shares:
 
-## Utility Functions
+- the same field names for requests, responses, outgoing calls and errors;
+- the same redaction: chosen paths become `[REDACTED]`, credentials become fingerprints;
+- the same context fields (`trace_id`, `caller_system`, `consumer`, `subject`), added for you;
+- optionally, the same lines shipped to Grafana Loki.
 
-The utility functions are as described below:
+## Create a logger for your service
 
-### request(req: Request)
-
-The _request_ function logs an incoming HTTP request.
-
-#### Parameters
-
-**req:** Express request object
-
-### response(res: Response)
-
-The _response_ function logs an outgoing HTTP response
-
-#### Parameters
-
-**res:** Express request object
-
-### httpError(err: Error, req: Request, res: Response)
-
-The _httpError_ function Logs an error that occured during the handling of an HTTP request.
-
-#### Parameters
-
-**err:** Error object
-**req:** Express request object
-**res:** Express response object
-
-### axiosRequest(req: AxiosRequestConfig)
-
-The _axiosRequest_ function logs an axios request
-
-#### Parameters
-
-**req:** [AxiosRequestConfig](https://axios-http.com/docs/req_config) object
-
-### axiosResponse(res: AxiosResponse)
-
-The _axiosResponse_ function logs response to axios request
-
-#### Parameters
-
-**res:** [AxiosResponse](https://axios-http.com/docs/res_schema) object
-
-### axiosError(err: AxiosError)
-
-The _axiosError_ function logs error response to axios request
-
-#### Parameters
-
-**err:** [AxiosError](https://axios-http.com/docs/handling_errors) object
-
-### log(entry: string | object)
-
-The _log_ message logs simple messages
-
-#### Parameters
-
-**entry:** Entry message to be logged
-
-### error(entry: string | LogError)
-
-The _error_ function logs internal application error.
-
-#### Parameters
-
-**entry:** additional error description
-
-## Practical examples
-
-Let's look at practical examples of the Logger module
-
-```js
-import express from "express";
+```ts
 import { Logger, defaultSerializers } from "@noxecane/octonet";
 
-// create the Logger instance
-const logger: Logger = new Logger({
-  name: "wallet_demo",
-  serializers: defaultSerializers("password"),
-  verbose: false
+const logger = new Logger({
+  name: "billing",
+  serializers: defaultSerializers("password", "card.number")
 });
-
-// Express-related Logger utility functions
-app.get("/test", (err, req, res) => {
-  logger.request(req);
-  logger.response(res);
-  logger.httpError(err, req, res);
-});
-
-// axios-related utility functions
-
-// others
-logger.log("transactionn service called");
-logger.error("an internal server error has occured");
 ```
 
-## Shipping logs to Loki
+`LoggerConfig`:
 
-The logger can also send every record to [Grafana Loki](https://grafana.com/docs/loki/latest/), next to
-stdout (or `buffer`). Nothing changes until you pass `loki`, and nothing is sent while `loki.url` is empty,
-so you can hand it an environment variable that's only set where Loki exists.
+| option        | description                                                                              |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| `name`        | your service's name, on every line                                                       |
+| `serializers` | how fields are written; use `defaultSerializers(...paths)`, see below                    |
+| `verbose`     | `false` writes errors only; otherwise info and above                                     |
+| `buffer`      | write here instead of stdout. It gets each record as an object, like `Bunyan.RingBuffer` |
+| `loki`        | also ship lines to Loki, see [below](#ship-logs-to-loki)                                 |
+
+`defaultSerializers` covers the fields octonet writes: `req`, `res`, `axios_req`, `axios_res`, `event` and
+`err`.
+
+You can also wrap a Bunyan logger you built yourself: `new Logger(bunyanLogger)`. It gets no Loki shipping.
+
+## Log events and errors
+
+```ts
+logger.log("charged card", { charge_id, amount }); // info, with a message
+logger.log({ charge_id, amount }); // info, fields only
+
+logger.error(err); // error, with the error under `err`
+logger.error(err, { charge_id }); // with extra fields
+logger.error(err, "charge failed"); // with a message
+```
+
+Errors are written with their stack (with the stacks of a VError-style `cause()` chain), `message`, `name`
+and their own fields, with the redaction paths applied, so an `APIError`'s `data` is redacted like a response
+body.
+
+To log an event's payload with the redaction paths applied, put it under `event`:
+
+```ts
+logger.log("refund requested", { event: payload });
+```
+
+## Log the requests your service receives
+
+`request(req)`, `response(req, res)` and `httpError(err, req, res)` write the express request (method, url,
+headers, params, client address, body), the response (status, headers) and the error. The response body is
+only logged if you put it in `res.locals.body`. Install the logging middleware after `receive`, so its lines
+carry the request's trace.
+
+```ts
+app.use(receive(config));
+app.use((req, res, next) => {
+  logger.request(req);
+  res.on("finish", () => logger.response(req, res));
+  next();
+});
+
+app.use((err, req, res, next) => {
+  res.status(500).json({ message: "something went wrong" });
+  logger.httpError(err, req, res);
+});
+```
+
+## Log the calls your service makes
+
+Give `createAgent` a `logger`, or call `useLogger(instance, logger)` on any axios instance (see
+[HTTP](HTTP.md)). Each request is logged as `axios_req`, each response as `axios_res`, and a failure at error
+level with both. You can call `axiosRequest`, `axiosResponse` and `axiosError` on the logger yourself too.
+
+## Follow one request or message through the logs
+
+Every line written while [`receive`](HTTP.md#know-who-is-calling-you) handles a request, or
+[`consume`](NATS.md#react-to-another-services-events) handles a message, gets:
+
+- `trace_id`: the trace's id, the same in every service the request or message reaches;
+- `caller_system`: the calling service, when there is one;
+- `consumer` and `subject`: the durable consumer and the message's subject, for a NATS message.
+
+The user is never added: what to log about users is your app's call. Outside a request or message, lines
+have none of these fields.
+
+## Keep secrets out of logs
+
+**Paths** given to `defaultSerializers(...paths)`, e.g. `"password"` or `"card.number"`, are found at any
+depth of request and response bodies, outgoing call bodies and `event`, and their values written as
+`[REDACTED]`. The field stays, so you can tell it was sent. Use paths for passwords and other low-entropy
+values.
+
+**Credential headers** (`Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, in any case) are
+always replaced with a fingerprint, in incoming and outgoing requests and responses:
+
+```
+Authorization: Bearer [REDACTED sha256:3f9a1c2e]
+Cookie:        sid=[REDACTED sha256:9b0e44d1]; theme=[REDACTED sha256:c1d07a52]
+Set-Cookie:    sid=[REDACTED sha256:9b0e44d1]; Path=/; HttpOnly
+```
+
+The auth scheme, cookie names and cookie attributes are kept. Every redaction starts with `[REDACTED` (the
+exported `REDACTED` is `"[REDACTED]"`), so one search finds them all.
+
+To record _who_ made a request, log the identity you resolved, not the credential.
+
+## Find where a leaked token was used
+
+A fingerprint is the first 8 hex characters of the value's SHA-256. It tells you whether two requests used
+the same credential, and can't be turned back into it. Hash a leaked token the same way and search for it:
+
+```ts
+import { fingerprint } from "@noxecane/octonet";
+
+fingerprint(leakedToken); // "[REDACTED sha256:3f9a1c2e]"
+```
+
+Don't fingerprint passwords: their hashes can be brute-forced. Use a path instead.
+
+## Write your own serializers
+
+The pieces `defaultSerializers` is made of are exported, to build serializers for your own fields:
+
+| export                      | what it returns                                                    |
+| --------------------------- | ------------------------------------------------------------------ |
+| `sanitized(...paths)`       | a serializer that copies an object, redacting `paths` at any depth |
+| `redactHeaders(headers)`    | a copy of `headers` with credentials fingerprinted                 |
+| `serializeErr`              | the error serializer                                               |
+| `expressRequest(...paths)`  | the `req` serializer                                               |
+| `expressResponse(...paths)` | the `res` serializer                                               |
+| `axiosRequest(...paths)`    | the `axios_req` serializer                                         |
+| `axiosResponse(...paths)`   | the `axios_res` serializer                                         |
+
+None of them change what they're given.
+
+```ts
+import { Logger, defaultSerializers, redactHeaders, sanitized } from "@noxecane/octonet";
+
+const logger = new Logger({
+  name: "billing",
+  serializers: {
+    ...defaultSerializers("password"),
+    webhook: (hook: Webhook) => ({ ...sanitized("secret")(hook.body), headers: redactHeaders(hook.headers) })
+  }
+});
+
+logger.log({ webhook: incomingHook });
+```
+
+## Add fields to every line from one part of your app
+
+`child(fields)` returns a logger that adds `fields` to every line. It shares the parent's Loki shipping.
+
+```ts
+const payouts = logger.child({ module: "payouts" });
+payouts.log("payout sent", { payout_id });
+```
+
+## Check what your code logs, in tests
+
+Pass a Bunyan `RingBuffer` as `buffer` and read its records:
+
+```ts
+import Bunyan from "bunyan";
+
+const buffer = new Bunyan.RingBuffer({ limit: 10 });
+const logger = new Logger({ name: "test", serializers: defaultSerializers("password"), buffer });
+
+// ... run the code under test
+expect(buffer.records[0].req.body.password).toBe("[REDACTED]");
+```
+
+## Ship logs to Loki
+
+Pass `loki` and the same lines also go to [Grafana Loki](https://grafana.com/docs/loki/latest/), next to
+stdout (or `buffer`). Nothing is sent while `loki.url` is empty, so you can pass an environment variable
+that's only set where Loki runs.
 
 ```ts
 const logger = new Logger({
@@ -124,56 +204,31 @@ process.on("SIGTERM", async () => {
 });
 ```
 
-Records are pushed to `${url}/loki/api/v1/push` with each line being the whole record as JSON, the same
-record you see on stdout. Child loggers share their parent's Loki stream.
+Lines are pushed to `${url}/loki/api/v1/push`, each one the whole record as JSON. Only lines at the logger's
+level are shipped. `flush()` resolves once everything logged so far has been sent (or dropped); it never
+rejects, and does nothing without Loki.
 
-### Options
+`LokiConfig`:
 
-| option        | default   | description                                                                                    |
-| ------------- | --------- | ---------------------------------------------------------------------------------------------- |
-| `url`         | —         | base URL of Loki. Empty or undefined disables shipping                                          |
-| `labels`      | —         | static labels sent with every stream, as given                                                  |
-| `level_label` | `"level"` | label holding the level name (`trace` … `fatal`). `false` leaves the level out of the labels   |
-| `batch_size`  | `100`     | send once a batch has this many records                                                         |
-| `interval`    | `"1s"`    | send this long after a batch's first record                                                     |
-| `max_queue`   | `10000`   | records held while waiting to send; past this the oldest are dropped                            |
-| `timeout`     | `"5s"`    | how long to wait for Loki before dropping a batch                                               |
+| option        | default   | description                                                                                  |
+| ------------- | --------- | -------------------------------------------------------------------------------------------- |
+| `url`         | —         | base URL of Loki. Empty or undefined disables shipping                                       |
+| `labels`      | —         | static labels sent with every stream, as given                                               |
+| `level_label` | `"level"` | label holding the level name (`trace` … `fatal`). `false` leaves the level out of the labels |
+| `batch_size`  | `100`     | send once a batch has this many lines                                                        |
+| `interval`    | `"1s"`    | send this long after a batch's first line                                                    |
+| `max_queue`   | `10000`   | lines held while waiting to send; past this the oldest are dropped                           |
+| `timeout`     | `"5s"`    | how long to wait for Loki before dropping a batch                                            |
 
-Keep labels few and low-cardinality: Loki indexes every distinct label value. Request ids, user ids and the
-like belong in the log line, where `| json` in LogQL can still filter on them.
+Keep labels few and fixed: Loki indexes every distinct label value. Ids belong in the line, where `| json`
+in LogQL can still filter on them.
 
-### Failure behaviour
+### When Loki is down
 
-Shipping never breaks the app. Records are sent in the background, one request at a time. If Loki is down,
-slow or answers with a non-2xx status the batch is dropped (no retries), and a single line goes to stderr
-for the whole outage, plus one when Loki is reachable again. While a request is in flight new records queue
-up to `max_queue`. Logging only goes to Loki at the logger's level (`verbose: false` → errors only).
+Shipping never breaks or blocks your app:
 
-## Redaction
-
-Everything the serializers hide starts with `[REDACTED`, so one search finds every redaction. A
-redacted field is never removed: you can still tell it was sent.
-
-**Paths** passed to `defaultSerializers(...paths)` (e.g. `"password"`, `"card.number"`) are matched at
-any depth of request/response bodies and events, and their values are logged as `[REDACTED]`. Use them
-for passwords and anything else low-entropy.
-
-**Credential headers** (`Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`) are always
-redacted, by express and axios serializers alike, into a fingerprint: the first 8 hex characters of the
-value's SHA-256.
-
-```
-Authorization: Bearer [REDACTED sha256:3f9a1c2e]
-Cookie:        sid=[REDACTED sha256:9b0e44d1]; theme=[REDACTED sha256:c1d07a52]
-Set-Cookie:    sid=[REDACTED sha256:9b0e44d1]; Path=/; HttpOnly
-```
-
-The auth scheme, cookie names and cookie attributes are kept for debugging. The fingerprint tells you
-whether requests used the same credential, and lets you find a leaked token in the logs: hash it with
-`fingerprint(token)` and search for the result. It can't be turned back into the token. Don't use it
-for passwords, whose hashes can be brute-forced; use a path instead.
-
-`redactHeaders`, `fingerprint`, `sanitized` and `REDACTED` are exported for custom serializers.
-
-To find out *who* made a request, log the identity your auth resolved (user or session id), not the
-credential.
+- Lines are sent in the background, one request at a time. Meanwhile new lines queue, up to `max_queue`.
+- If Loki is unreachable, too slow or answers with an error status, the batch is dropped. There are no
+  retries.
+- One line goes to stderr when shipping starts failing, and one when Loki is reachable again.
+- stdout (or `buffer`) gets every line regardless.

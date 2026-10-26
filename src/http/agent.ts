@@ -1,168 +1,109 @@
-import axios, {
-  AxiosHeaders,
-  AxiosInstance,
-  AxiosRequestConfig,
-  AxiosResponse,
-  InternalAxiosRequestConfig
-} from "axios";
+import axios, { AxiosHeaders, AxiosInstance, InternalAxiosRequestConfig } from "axios";
+import ms from "ms";
 
+import { TRACEPARENT_HEADER, currentContext, nextTraceparent } from "../context";
+import { useErrors } from "./errors";
+import { useLogger } from "./logging";
+import { encode } from "../jwt";
 import { Logger } from "../logging/logger";
-import { AuthConfig, RequestWrapper } from "./wrapper";
-
-const defaultAxiosConfig: Partial<AxiosRequestConfig> = {
-  transitional: { clarifyTimeoutError: true },
-  transformResponse: [
-    data => {
-      if (data === "") {
-        return {};
-      }
-
-      return JSON.parse(data);
-    }
-  ]
-};
-
-export enum HttpMethod {
-  GET = "GET",
-  POST = "POST",
-  PUT = "PUT",
-  PATCH = "PATCH",
-  DELETE = "DELETE"
-}
 
 /**
- * Configuration for the agent.
+ * Key for the system tokens the agent sends.
  */
-export interface AgentConfig {
+export interface AgentAuthConfig {
   /**
-   * name of the service that'll be making these requests
-   */
-  service: string;
-  /**
-   * custom scheme for system requests
+   * scheme of the `Authorization` header, e.g. `Octonet` in `Octonet <token>`
    */
   scheme: string;
   /**
-   * secret and for encrypting & signing requests
+   * this service's key, which the services it calls decode its tokens with
    */
-  secret: string;
+  key: Uint8Array;
   /**
-   * default timeout for request tokens in seconds. Defaults to 10s
+   * key id put in the token's header. Receivers holding several keys expect it
+   * to equal `service`
+   */
+  kid?: string;
+  /**
+   * how long a token lives, in `ms` format. Defaults to "10s"
    */
   timeout?: string;
-  /**
-   * Log axios requests, responses and errors.
-   */
-  logger?: Logger;
 }
 
-export class HttpAgent {
-  protected instance: AxiosInstance;
-  private service: string;
-  private authConfig: AuthConfig;
-
-  constructor(config: AgentConfig, axiosConfig?: Partial<AxiosRequestConfig>) {
-    this.instance = axios.create({ ...defaultAxiosConfig, ...axiosConfig });
-    this.service = config.service;
-    this.authConfig = {
-      secret: new TextEncoder().encode(config.secret),
-      scheme: config.scheme,
-      timeout: config.timeout ?? "10s"
-    };
-
-    if (config.logger) {
-      this.useLogger(config.logger);
-    }
-  }
-
+export interface AgentConfig {
   /**
-   * Create and wrapper an HTTP request for easy configuration.
-   * @param method HTTP method of API
-   * @param url absolute URL of API
-   * @param data request body payload
+   * name of the service making the requests, sent in its token
    */
-  makeRequest<T extends object = any>(method: HttpMethod, url: string, data?: T) {
-    const httpRequest: Partial<AxiosRequestConfig> = { method, url };
-
-    switch (method) {
-      case HttpMethod.GET:
-      case HttpMethod.DELETE:
-        break;
-      default:
-        httpRequest.data = data;
-    }
-
-    return new RequestWrapper(this.instance, this.service, this.authConfig, httpRequest);
-  }
-
+  service: string;
   /**
-   * Log axios requests, responses and errors.
-   * @param logger logger setup with axios request/response serializers
+   * log every request, response and failure
    */
-  private useLogger(logger: Logger) {
-    const onRequest = (reqConfig: AxiosRequestConfig) => {
-      logger.axiosRequest(reqConfig);
-      if (!(reqConfig.headers instanceof AxiosHeaders)) {
-        reqConfig.headers = new AxiosHeaders(reqConfig.headers);
-      }
-
-      return reqConfig as InternalAxiosRequestConfig;
-    };
-
-    const onResponse = (res: AxiosResponse) => {
-      logger.axiosResponse(res);
-      return res;
-    };
-
-    const onErrorResponse = (err: any) => {
-      logger.axiosError(err);
-      return Promise.reject(err);
-    };
-
-    this.instance.interceptors.request.use(onRequest, error => Promise.reject(error));
-    this.instance.interceptors.response.use(onResponse, onErrorResponse);
-  }
-
+  logger?: Logger;
   /**
-   * Makes a get request
-   * @param url absolute URL
+   * request timeout, in `ms` format. Defaults to "10s"
    */
-  get(url: string) {
-    return this.makeRequest(HttpMethod.GET, url);
-  }
+  timeout?: string;
+  auth: AgentAuthConfig;
+}
 
-  /**
-   * Makes a post request
-   * @param url absolute URL
-   * @param body request body payload
-   */
-  post<T extends object = any>(url: string, body?: T) {
-    return this.makeRequest(HttpMethod.POST, url, body);
-  }
+/**
+ * Who an agent's calls act for, instead of the incoming request's user.
+ */
+export interface Identity {
+  user?: Octonet.User;
+}
 
+/**
+ * An axios instance for calling other services. Every call carries the trace
+ * and a system token.
+ */
+export type HttpAgent = AxiosInstance & {
   /**
-   * Makes a put request
-   * @param url absolute URL
-   * @param body request body payload
+   * a new agent whose calls act for `identity.user`, whatever request is being
+   * handled. This agent is unchanged
    */
-  put<T extends object = any>(url: string, body?: T) {
-    return this.makeRequest(HttpMethod.PUT, url, body);
-  }
+  for(identity: Identity): HttpAgent;
+};
 
-  /**
-   * Makes a patch request
-   * @param url absolute URL
-   * @param body request body payload
-   */
-  patch<T extends object = any>(url: string, body?: T) {
-    return this.makeRequest(HttpMethod.PATCH, url, body);
-  }
+/**
+ * Create an agent for calling other services. Every call continues the trace of
+ * the request being handled (or starts one), and sends a system token naming
+ * this service and the user it acts for: the one given to `for`, else the
+ * caller's user. Failures come out as `APIError`, `TimeoutError` or `HttpError`.
+ * @param config the agent's configuration
+ */
+export function createAgent(config: AgentConfig): HttpAgent {
+  return build(config);
+}
 
-  /**
-   * Makes a delete request
-   * @param url absolute URL
-   */
-  del(url: string) {
-    return this.makeRequest(HttpMethod.DELETE, url);
+function build(config: AgentConfig, identity?: Identity): HttpAgent {
+  const instance = axios.create({ timeout: ms(config.timeout ?? "10s") });
+
+  // response interceptors run in order: the logger must see axios's own error
+  if (config.logger) {
+    useLogger(instance, config.logger);
   }
+  useErrors(instance);
+
+  // request interceptors run in reverse order: this runs first, so the logged
+  // request has the final headers
+  instance.interceptors.request.use(req => applyContracts(config, identity, req));
+
+  return Object.assign(instance, { for: (next: Identity) => build(config, next) });
+}
+
+async function applyContracts(config: AgentConfig, identity: Identity | undefined, req: InternalAxiosRequestConfig) {
+  const ctx = currentContext();
+  const user = identity ? identity.user : ctx?.caller.user;
+  const { auth } = config;
+
+  const claims = user === undefined ? { service: config.service } : { service: config.service, user };
+  const token = await encode(auth.key, auth.timeout ?? "10s", claims, { kid: auth.kid });
+
+  const headers = AxiosHeaders.from(req.headers);
+  headers.set(TRACEPARENT_HEADER, nextTraceparent(ctx?.traceparent));
+  headers.set("Authorization", `${auth.scheme} ${token}`);
+
+  req.headers = headers;
+  return req;
 }

@@ -1,7 +1,9 @@
 export * from "./http/agent";
+export { Caller, TRACEPARENT_HEADER } from "./context";
 export * from "./http/errors";
+export * from "./http/logging";
+export * from "./http/receive";
 export * as jwt from "./jwt";
-export * from "./http/wrapper";
 export * from "./logging/logger";
 export { LokiConfig } from "./logging/loki";
 export * from "./logging/serializers";

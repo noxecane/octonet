@@ -98,13 +98,19 @@ export function axiosRequest(...paths: string[]) {
 
     log.headers = redactHeaders(headers);
 
-    // Handle request data
-    if (typeof conf.data === "string") {
-      conf.data = JSON.parse(conf.data);
+    // once sent, the body is a string. Only a JSON one can be redacted, so other
+    // strings (e.g. urlencoded forms) are left out. Never touch `conf` itself
+    let data = conf.data;
+    if (typeof data === "string") {
+      try {
+        data = JSON.parse(data);
+      } catch {
+        data = undefined;
+      }
     }
 
-    if (conf.data && Object.keys(conf.data).length !== 0) {
-      const logBody = deepSanitizeObj(conf.data, ...paths);
+    if (data && typeof data === "object" && Object.keys(data).length !== 0) {
+      const logBody = deepSanitizeObj(data, ...paths);
       log["data"] = logBody;
     }
 

@@ -36,6 +36,11 @@ export function createTestApp() {
     return res.status(422).json({ message: "an error occurred" });
   });
 
+  // like a proxy in front of a service that's down
+  app.get("/test/bad-gateway", (_req, res) => {
+    return res.status(502).type("html").send("<html><body>Bad Gateway</body></html>");
+  });
+
   app.post("/test", uploads.none(), (req, res) => {
     return res.json({ method: req.method, headers: req.headers, body: req.body });
   });
@@ -70,8 +75,10 @@ export function startServer(app: Application) {
   });
 }
 
-export const stopServer = server =>
+export const stopServer = (server: Server) =>
   new Promise((resolve, reject) => {
+    // clients keep connections alive, and close() would wait for them
+    server.closeAllConnections();
     server.close(err => {
       if (err) return reject(err);
       return resolve("Server shut down gracefully.");

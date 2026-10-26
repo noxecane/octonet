@@ -1,5 +1,5 @@
 export * from "./http/agent";
-export { Caller, TRACEPARENT_HEADER } from "./context";
+export { Caller } from "./context";
 export * from "./http/errors";
 export * from "./http/logging";
 export * from "./http/receive";

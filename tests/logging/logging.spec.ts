@@ -1,4 +1,4 @@
-import { Logger, defaultSerializers, fingerprint, redactHeaders, sanitized } from "../../src";
+import { APIError, Logger, defaultSerializers, fingerprint, redactHeaders, sanitized } from "../../src";
 
 import Bunyan from "bunyan";
 import axios from "axios";
@@ -72,6 +72,14 @@ describe("Logger#response", () => {
     const { res } = ringbuffer.records[0];
     expect(res.statusCode).to.eq(200);
     expect(res.body).to.deep.eq({ password: "[REDACTED]", other_prop: "other" });
+  });
+});
+
+describe("Logger#error", () => {
+  it("should redact sensitive paths in an error's data, like a response body", () => {
+    logger.error(new APIError("http://wallets/charge", 422, { password: "hunter2", reason: "declined" }));
+
+    expect(ringbuffer.records[0].err.data).to.deep.eq({ password: "[REDACTED]", reason: "declined" });
   });
 });
 

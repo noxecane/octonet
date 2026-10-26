@@ -131,13 +131,13 @@ async function run(messages: ConsumerMessages, handler: Handler, consumer: strin
         let data: unknown;
         try {
           data = decode(msg.data);
-          logger.log({ data });
+          logger.log({ event: data });
           await handler.handle(data);
           msg.ack();
         } catch (err) {
           const attempt = msg.info.deliveryCount;
           const dropped = attempt >= maxDeliver;
-          logger.error(err, { data, attempt, dropped });
+          logger.error(err, { event: data, attempt, dropped });
           if (dropped) {
             msg.term();
           } else {

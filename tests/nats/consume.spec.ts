@@ -267,6 +267,28 @@ describe("consume", () => {
 });
 
 describe("consume: context", () => {
+  it("should redact sensitive paths in logged messages", async () => {
+    const name = fx.streamName();
+    await ensureStream(fx.nats, name, { type: "broadcast", buffer: 10 });
+    const { logger, records } = bufferLogger("password");
+    let handled = false;
+
+    @stream(name)
+    class Signups {
+      @subscribe("created")
+      handle() {
+        handled = true;
+      }
+    }
+
+    running.push(await consume(fx.nats, [new Signups()], { app: "tests", logger }));
+    await publish(fx.nats, `${name}.created`, { email: "ada@example.com", password: "hunter2" });
+    await until(() => handled);
+
+    const logged = records().find(r => r.event);
+    expect(logged.event).to.deep.eq({ email: "ada@example.com", password: "[REDACTED]" });
+  });
+
   it("should handle each message in its publisher's trace, with the consumer on every log", async () => {
     const name = fx.streamName();
     await ensureStream(fx.nats, name, { type: "broadcast", buffer: 10 });

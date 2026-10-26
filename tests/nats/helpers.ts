@@ -35,8 +35,8 @@ export async function natsFixture() {
   };
 }
 
-export function bufferLogger() {
+export function bufferLogger(...redact: string[]) {
   const buffer = new Bunyan.RingBuffer({ limit: 100 });
-  const logger = new Logger({ name: "nats_tests", serializers: defaultSerializers(), buffer });
+  const logger = new Logger({ name: "nats_tests", serializers: defaultSerializers(...redact), buffer });
   return { logger, records: () => buffer.records };
 }

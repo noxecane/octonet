@@ -69,6 +69,8 @@
   serializer redacts; it now logs them under `event`, so the paths given to `defaultSerializers` apply.
 - **Error data is redacted in logs**, like response bodies: an `APIError`'s `data` (or any field of a logged
   error) goes through the same paths.
+- `LoggerConfig.buffer` only accepts what works: a stream that takes records as objects, like Bunyan's
+  `RingBuffer`. A plain writable stream used to type-check and then throw on the first log line.
 - HTTP errors with a non-JSON body (e.g. an HTML 502 from a proxy) are an `APIError` with their status and the
   body as text. The response was always parsed as JSON, so they failed with a parse error and lost the status.
 - `TimeoutError`'s message gives the timeout in ms (`timed out after 500ms`); it used to print a bare number
@@ -86,6 +88,7 @@
 
 ### Removed
 
+- The unused `LogError` type.
 - **Breaking:** the `qs` and `form-data` dependencies, with the request wrapper that used them.
 - **Breaking:** AMQP support (`QueueFactory`, `Queue`, `Workers`, `@worker`, `@command`) and the `amqplib`
   dependency. Use amqplib directly if you need RabbitMQ.

@@ -5,11 +5,6 @@ import { Request, Response } from "express";
 import { LokiConfig, LokiStream } from "./loki";
 import { currentContext, parseTraceparent } from "../context";
 
-export interface LogError {
-  err: Error;
-  [key: string]: any;
-}
-
 type Serializer = (input: any) => any;
 type Serializers = {
   [key: string]: Serializer;
@@ -19,7 +14,7 @@ export interface LoggerConfig {
   name: string;
   serializers: Serializers;
   verbose?: boolean;
-  buffer?: NodeJS.WritableStream | Bunyan.WriteFn;
+  buffer?: Bunyan.WriteFn;
   /**
    * also ship logs to Loki, next to stdout(or `buffer`). Nothing is sent when unset
    * or when `url` is empty.

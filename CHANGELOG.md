@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Tracing for NATS messages.** `publish` sends a `traceparent` that continues the current request's or
+  message's trace. `consume` runs each message inside its trace, and every log line written while handling it
+  gets `trace_id`, `consumer` and `subject`. See [docs/NATS.md](docs/NATS.md#tracing-and-logs).
 - **Work queues on NATS.** `ensureStream(nats, name, { type: "queue" })` creates a stream that keeps each
   job until a worker acknowledges it. `consume` delivers a queue's pending jobs, including those enqueued
   while no worker ran, and instances of one app share the work. See [docs/NATS.md](docs/NATS.md#queues).

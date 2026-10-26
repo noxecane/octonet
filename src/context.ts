@@ -39,26 +39,34 @@ export interface Caller {
 }
 
 /**
- * What every piece handling one incoming request shares.
+ * What every piece handling one incoming request, or one NATS message, shares.
  */
-export interface RequestContext {
+export interface Context {
   traceparent: string;
   caller: Caller;
+  /**
+   * the durable consumer handling the message, when this is a NATS message
+   */
+  consumer?: string;
+  /**
+   * the message's subject, when this is a NATS message
+   */
+  subject?: string;
 }
 
-const storage = new AsyncLocalStorage<RequestContext>();
+const storage = new AsyncLocalStorage<Context>();
 
 /**
  * Run `fn`, and everything it starts, inside `ctx`.
  */
-export function runInContext<T>(ctx: RequestContext, fn: () => T): T {
+export function runInContext<T>(ctx: Context, fn: () => T): T {
   return storage.run(ctx, fn);
 }
 
 /**
  * The context of the incoming request being handled, if any.
  */
-export function currentContext(): RequestContext | undefined {
+export function currentContext(): Context | undefined {
   return storage.getStore();
 }
 

@@ -167,8 +167,8 @@ export class Logger {
     }
   }
 
-  // the bunyan logger to write with: inside a request, a cheap child adding the
-  // trace and calling service. Never the user: logging user data is the app's call
+  // the bunyan logger to write with: inside a request or a NATS message, a cheap
+  // child adding the trace, calling service and consumer. Never the user: logging user data is the app's call
   private scoped() {
     const ctx = currentContext();
     if (!ctx) return this.logger;
@@ -177,6 +177,8 @@ export class Logger {
     const trace = parseTraceparent(ctx.traceparent);
     if (trace) fields.trace_id = trace.traceId;
     if (ctx.caller.system) fields.caller_system = ctx.caller.system;
+    if (ctx.consumer) fields.consumer = ctx.consumer;
+    if (ctx.subject) fields.subject = ctx.subject;
 
     return this.logger.child(fields, true);
   }

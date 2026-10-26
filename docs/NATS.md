@@ -118,6 +118,20 @@ The decorators need `experimentalDecorators` in your tsconfig.
 
 A broken subscription (e.g. the stream is deleted) is logged and never crashes the process.
 
+### Tracing and logs
+
+Messages carry a W3C `traceparent`. `publish` continues the trace of the request or message it's called from,
+or starts one. Each handler runs inside its message's trace, so its HTTP calls and further publishes continue
+the same trace.
+
+Every log line written while handling a message, including your handler's own logs, gets `trace_id`,
+`consumer` (the durable consumer's name) and `subject`. One event can then be followed from the request that
+published it, through each consumer, in Loki:
+
+```
+{service="billing"} | json | consumer = "transactions_billing_credit_opts"
+```
+
 ### Options
 
 | option        | default | description                                                 |

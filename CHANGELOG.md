@@ -62,6 +62,9 @@
 
 ### Fixed
 
+- Token lifetimes (`jwt.encode`'s `timeout`, `createAgent`'s `auth.timeout`) take `ms` format like every
+  other duration in octonet. They went to jose's own parser, which rejected values like `"500ms"`. Expiry is
+  rounded up to whole seconds.
 - **NATS messages are redacted in logs.** `consume` logged each message's contents under `data`, which no
   serializer redacts; it now logs them under `event`, so the paths given to `defaultSerializers` apply.
 - **Error data is redacted in logs**, like response bodies: an `APIError`'s `data` (or any field of a logged

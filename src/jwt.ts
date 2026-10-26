@@ -1,4 +1,5 @@
 import { EncryptJWT, JWTDecryptGetKey, errors, jwtDecrypt } from "jose";
+import ms from "ms";
 
 /**
  * Keys to decode with: a single secret, a map from key id (`kid`) to secret, or a
@@ -26,7 +27,8 @@ export interface Decoded<T> {
 /**
  * Sign and encrypt data as a JWT token
  * @param secret secret for signing and encrypting
- * @param timeout how long before the JWT expires. This is intentionally required
+ * @param timeout how long before the JWT expires, in `ms` format (e.g. "5m"). Rounded up
+ * to whole seconds, as JWT expiry is. This is intentionally required
  * @param data data to encoode and encrypt
  * @param opts encoding options, e.g. `kid`
  * @returns encrypted JWT token
@@ -35,7 +37,7 @@ export function encode(secret: Uint8Array, timeout: string, data: any, opts: Enc
   return new EncryptJWT({ "urn:custom:claim": data })
     .setProtectedHeader({ alg: "dir", enc: "A256GCM", ...(opts.kid ? { kid: opts.kid } : {}) })
     .setIssuedAt()
-    .setExpirationTime(timeout)
+    .setExpirationTime(Math.ceil((Date.now() + ms(timeout)) / 1000))
     .encrypt(secret);
 }
 

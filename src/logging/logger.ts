@@ -3,6 +3,7 @@ import Bunyan, { ERROR, INFO } from "bunyan";
 import { Request, Response } from "express";
 
 import { LokiConfig, LokiStream } from "./loki";
+import { currentContext, parseTraceparent } from "../context";
 
 export interface LogError {
   err: Error;
@@ -81,7 +82,7 @@ export class Logger {
    * @param req Express request
    */
   request(req: Request) {
-    this.logger.info({ req });
+    this.scoped().info({ req });
   }
 
   /**
@@ -90,7 +91,7 @@ export class Logger {
    * @param res Express responser
    */
   response(req: Request, res: Response) {
-    this.logger.info({ res, req });
+    this.scoped().info({ res, req });
   }
 
   /**
@@ -100,7 +101,7 @@ export class Logger {
    * @param res express responser
    */
   httpError(err: Error, req: Request, res: Response) {
-    this.logger.error({ err, res, req });
+    this.scoped().error({ err, res, req });
   }
 
   /**
@@ -108,7 +109,7 @@ export class Logger {
    * @param req Axios Request
    */
   axiosRequest(req: AxiosRequestConfig) {
-    this.logger.info({ axios_req: req });
+    this.scoped().info({ axios_req: req });
   }
 
   /**
@@ -116,7 +117,7 @@ export class Logger {
    * @param res Axios Response
    */
   axiosResponse(res: AxiosResponse) {
-    this.logger.info({ axios_req: res.config, axios_res: res });
+    this.scoped().info({ axios_req: res.config, axios_res: res });
   }
 
   /**
@@ -124,7 +125,7 @@ export class Logger {
    * @param err
    */
   axiosError(err: AxiosError) {
-    this.logger.error({ axios_req: err.response?.config || err.config, axios_res: err.response });
+    this.scoped().error({ axios_req: err.response?.config || err.config, axios_res: err.response });
   }
 
   /**
@@ -140,9 +141,9 @@ export class Logger {
   log(message: string, metadata?: object): void;
   log(entry: string | any, metadata?: object) {
     if (typeof entry === "string" && metadata) {
-      this.logger.info(metadata, entry);
+      this.scoped().info(metadata, entry);
     } else {
-      this.logger.info(entry);
+      this.scoped().info(entry);
     }
   }
 
@@ -160,9 +161,23 @@ export class Logger {
   error(err: Error, message?: string): void;
   error(err: Error, extras?: object | string) {
     if (typeof extras === "string") {
-      this.logger.error(err, extras);
+      this.scoped().error(err, extras);
     } else {
-      this.logger.error({ err, ...extras });
+      this.scoped().error({ err, ...extras });
     }
+  }
+
+  // the bunyan logger to write with: inside a request, a cheap child adding the
+  // trace and calling service. Never the user: logging user data is the app's call
+  private scoped() {
+    const ctx = currentContext();
+    if (!ctx) return this.logger;
+
+    const fields: Record<string, string> = {};
+    const trace = parseTraceparent(ctx.traceparent);
+    if (trace) fields.trace_id = trace.traceId;
+    if (ctx.caller.system) fields.caller_system = ctx.caller.system;
+
+    return this.logger.child(fields, true);
   }
 }

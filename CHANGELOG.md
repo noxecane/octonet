@@ -11,6 +11,27 @@
 
 ### Changed
 
+- **Breaking: interservice HTTP is `receive` plus `createAgent`.** See [docs/HTTP.md](docs/HTTP.md).
+  - `receive({ scheme, keys, user })` is new express middleware for a service's edge. It sets
+    `req.caller = { system?, user? }` from a system token (decoded with `jwt.decode`) or your `user`
+    resolver, and passes a bad system token to the error handler as `UnauthorizedError`. It keeps the
+    request's trace and caller for everything that handles it.
+  - `createAgent({ service, auth, logger, timeout })` replaces `new HttpAgent(config)` and returns an
+    `AxiosInstance`. Call it like axios (`http.get(url, opts)`) instead of building a `RequestWrapper` with
+    `makeRequest`/`get`/`post`/... and `.do()`/`.raw()`. `HttpMethod` and the wrapper's plugins are gone.
+  - Every agent call sends a W3C `traceparent` (continuing the current request's trace) and a system token
+    with `{ service, user? }`, where `user` is the current caller's user. These replace `.track(req)` and
+    `.auth(req | session)`, the `X-Request-ID`/`X-Origin-Service` headers, `NoRequestIDError` and
+    `NoAuthorizationTokenError`. `agent.for({ user })` gives an agent that acts for a given user.
+  - `auth: { scheme, key, kid?, timeout? }` is required and replaces `scheme`/`secret`: the key is a
+    `Uint8Array` and can carry a `kid`. For external APIs use a plain axios instance.
+  - The timeout is an `ms` string on the agent (`timeout: "5s"`), or axios's own `timeout` in ms per call,
+    instead of seconds passed to `.do()`.
+  - `.type("form" | "urlencoded")` and `.set()`/`.query()` are gone: pass `FormData` or `URLSearchParams`
+    bodies, and axios's `headers`/`params`.
+  - `useLogger(axios, logger)` and `useErrors(axios)` add logging and octonet's errors to any axios instance,
+    e.g. a client for an external API.
+  - `Logger` records written while handling a request get `trace_id` and `caller_system`.
 - **Breaking: NATS moves to nats 3 and plain functions.** See [docs/NATS.md](docs/NATS.md).
   - `ensureStream(nats, name, { type: "log", retention } | { type: "broadcast", buffer })` replaces
     `StreamFactory`, and takes an optional `duplicate_window`.
@@ -35,6 +56,12 @@
 
 ### Fixed
 
+- HTTP errors with a non-JSON body (e.g. an HTML 502 from a proxy) are an `APIError` with their status and the
+  body as text. The response was always parsed as JSON, so they failed with a parse error and lost the status.
+- `TimeoutError`'s message gives the timeout in ms (`timed out after 500ms`); it used to print a bare number
+  of seconds that rounded short timeouts to 0.
+- Logging an axios request no longer changes its config, and a non-JSON string body (e.g. a `URLSearchParams`
+  form) is left out of the log instead of breaking the serializer.
 - **Security, breaking: `RedisStore` issues a fresh random token for every session.** Tokens were
   `HMAC(secret, key)`, so a key always got the same token: a stolen token came back on every later sign-in,
   and anyone with the secret could compute any key's token. Now each `commission` returns a new token and
@@ -46,6 +73,7 @@
 
 ### Removed
 
+- **Breaking:** the `qs` and `form-data` dependencies, with the request wrapper that used them.
 - **Breaking:** AMQP support (`QueueFactory`, `Queue`, `Workers`, `@worker`, `@command`) and the `amqplib`
   dependency. Use amqplib directly if you need RabbitMQ.
 - **Breaking:** jobs (`@cron`, `@job`, `@query`, `hourly`/`daily`/`weekly`/`monthly`, `JobRunner`,

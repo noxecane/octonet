@@ -6,7 +6,7 @@ octonet's NATS module keeps publishers and consumers on the same conventions, on
 - a stream named `transactions` takes subjects `transactions.<anything>`
 - messages are plain JSON (dates travel as ISO strings)
 - each app gets its own durable consumer per subscription, so every app sees every message
-- consumers only get messages published after they first start
+- consumers only get messages published after they first start (except on queues, below)
 - a handler that returns acknowledges its message; one that throws has it redelivered
 
 Connect with nats 3 and pass the connection to every function:
@@ -30,10 +30,41 @@ await ensureStream(nats, "transactions", { type: "log", retention: "90d" });
 
 // in memory, the last 100 messages
 await ensureStream(nats, "presence", { type: "broadcast", buffer: 100 });
+
+// on disk, each job kept until a worker acknowledges it
+await ensureStream(nats, "emails", { type: "queue" });
 ```
 
 Both presets take an optional `duplicate_window` (e.g. `"10m"`): how long the stream remembers a message id
 to drop repeats. NATS defaults to 2 minutes. A stream can't change type once created.
+
+## Queues
+
+A `queue` stream holds jobs: each message stays until one consumer acknowledges it, then it's deleted.
+Publish and consume work as for any stream:
+
+```ts
+await ensureStream(nats, "emails", { type: "queue" }); // optional retention, e.g. "7d", for jobs nobody takes
+
+await publish(nats, "emails.welcome", { user_id }, { msgID: `welcome-${user_id}` }); // enqueue once
+
+@stream("emails")
+class Emails {
+  @subscribe("welcome")
+  async welcome(job: { user_id: string }) {
+    await mailer.sendWelcome(job.user_id);
+  }
+}
+await consume(nats, [new Emails(mailer)], { app: "mailer", logger });
+```
+
+How a queue differs from the other streams:
+
+- Workers get every pending job, including those enqueued while no worker was running.
+- Instances of the same app share the work: each job goes to one of them, once.
+- A queue's subjects have one consuming app. A second app subscribing to the same subject is refused when it
+  starts consuming.
+- Retries are the same as for any message: a throw redelivers the job, up to `max_deliver`.
 
 ## Publishing
 

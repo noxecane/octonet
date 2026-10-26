@@ -3,6 +3,7 @@ import {
   ConsumerMessages,
   DeliverPolicy,
   JetStreamApiError,
+  RetentionPolicy,
   jetstream,
   jetstreamManager
 } from "@nats-io/jetstream";
@@ -49,7 +50,8 @@ export interface Consumers {
 
 /**
  * Start a durable consumer for every `@subscribe` method of the given `@stream`
- * class instances. New messages only. A handler that returns acks its message;
+ * class instances. New messages only, except on a queue stream, where every
+ * pending message is delivered so no job is lost. A handler that returns acks its message;
  * one that throws has it redelivered, up to `max_deliver` attempts, after which
  * it's dropped and logged.
  * @param nats an open connection
@@ -61,8 +63,14 @@ export async function consume(nats: NatsConnection, instances: object[], cfg: Co
   const js = jetstream(nats);
   const maxDeliver = cfg.max_deliver ?? 5;
   const running: ConsumerMessages[] = [];
+  const queues = new Map<string, boolean>();
 
   for (const handler of instances.flatMap(handlersOf)) {
+    if (!queues.has(handler.stream)) {
+      const { config } = await jsm.streams.info(handler.stream);
+      queues.set(handler.stream, config.retention === RetentionPolicy.Workqueue);
+    }
+
     const subject = `${handler.stream}.${handler.subject}`;
     const durable = durableName(handler.stream, cfg.app, handler.subject);
     const settings = {
@@ -82,7 +90,8 @@ export async function consume(nats: NatsConnection, instances: object[], cfg: Co
       await jsm.consumers.add(handler.stream, {
         durable_name: durable,
         ack_policy: AckPolicy.Explicit,
-        deliver_policy: DeliverPolicy.New,
+        // a queue's pending jobs must not be skipped
+        deliver_policy: queues.get(handler.stream) ? DeliverPolicy.All : DeliverPolicy.New,
         ...settings
       });
     }

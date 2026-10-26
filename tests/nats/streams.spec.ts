@@ -1,4 +1,4 @@
-import { StorageType } from "@nats-io/jetstream";
+import { RetentionPolicy, StorageType } from "@nats-io/jetstream";
 import { nanos } from "@nats-io/transport-node";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
@@ -54,6 +54,22 @@ describe("ensureStream", () => {
 
     const { config } = await fx.jsm.streams.info(name);
     expect(config.max_age).to.eq(nanos(ms("30d")));
+  });
+
+  it("should create a queue that keeps messages until they're acknowledged", async () => {
+    const name = fx.streamName();
+    await ensureStream(fx.nats, name, { type: "queue" });
+
+    const { config } = await fx.jsm.streams.info(name);
+    expect(config.retention).to.eq(RetentionPolicy.Workqueue);
+    expect(config.storage).to.eq(StorageType.File);
+  });
+
+  it("should refuse to turn a log into a queue", async () => {
+    const name = fx.streamName();
+    await ensureStream(fx.nats, name, { type: "log", retention: "1d" });
+
+    await expect(ensureStream(fx.nats, name, { type: "queue" })).to.be.rejectedWith("already exists as a log stream");
   });
 
   it("should refuse to change a stream's type", async () => {

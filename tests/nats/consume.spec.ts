@@ -263,3 +263,91 @@ describe("consume", () => {
     );
   });
 });
+
+describe("consume: queues", () => {
+  async function queue() {
+    const name = fx.streamName();
+    await ensureStream(fx.nats, name, { type: "queue" });
+    return name;
+  }
+
+  it("should remove a job once its handler succeeds", async () => {
+    const name = await queue();
+    const done: number[] = [];
+
+    @stream(name)
+    class Jobs {
+      @subscribe("work")
+      handle(job: { n: number }) {
+        done.push(job.n);
+      }
+    }
+
+    await start([new Jobs()]);
+    await publish(fx.nats, `${name}.work`, { n: 1 });
+    await until(() => done.length === 1);
+    await sleep(200);
+
+    const { state } = await fx.jsm.streams.info(name);
+    expect(state.messages).to.eq(0);
+  });
+
+  it("should process jobs enqueued before any worker started", async () => {
+    const name = await queue();
+    const done: number[] = [];
+    await publish(fx.nats, `${name}.work`, { n: 1 });
+    await publish(fx.nats, `${name}.work`, { n: 2 });
+
+    @stream(name)
+    class Jobs {
+      @subscribe("work")
+      handle(job: { n: number }) {
+        done.push(job.n);
+      }
+    }
+
+    await start([new Jobs()]);
+    await until(() => done.length === 2);
+
+    expect(done.sort()).to.deep.eq([1, 2]);
+  });
+
+  it("should give each job to one of the app's instances, once", async () => {
+    const name = await queue();
+    const done: number[] = [];
+
+    @stream(name)
+    class Jobs {
+      @subscribe("work")
+      handle(job: { n: number }) {
+        done.push(job.n);
+      }
+    }
+
+    // two instances of the same app share its durable consumer
+    await start([new Jobs()]);
+    await start([new Jobs()]);
+    for (let n = 1; n <= 20; n++) {
+      await publish(fx.nats, `${name}.work`, { n });
+    }
+    await until(() => done.length >= 20);
+    await sleep(300);
+
+    expect(done.sort((a, b) => a - b)).to.deep.eq(Array.from({ length: 20 }, (_, i) => i + 1));
+  });
+
+  it("should refuse a second app on the same queue subject", async () => {
+    const name = await queue();
+
+    @stream(name)
+    class Jobs {
+      @subscribe("work")
+      handle() {}
+    }
+
+    await start([new Jobs()]);
+    const { logger } = bufferLogger();
+
+    await expect(consume(fx.nats, [new Jobs()], { app: "other", logger })).to.be.rejected;
+  });
+});

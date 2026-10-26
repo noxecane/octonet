@@ -1,6 +1,6 @@
 {
   "name": "@noxecane/octonet",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Web toolkit for macro services",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,7 +20,9 @@
     "url": "https://github.com/noxecane/octonet/issues"
   },
   "files": [
-    "dist/"
+    "dist/",
+    "docs/",
+    "CHANGELOG.md"
   ],
   "homepage": "https://github.com/noxecane/octonet#readme",
   "devDependencies": {

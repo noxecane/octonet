@@ -19,6 +19,19 @@ describe("jwt#encode", () => {
   });
 });
 
+describe("jwt#encode lifetime", () => {
+  it("should take an ms-format lifetime and expire after it", async () => {
+    const secret = key();
+    const token = await jwt.encode(secret, "500ms", claims);
+
+    expect((await jwt.decode(secret, token)).claims).to.deep.eq(claims);
+
+    // expiry is in whole seconds, so it lands within a second after the lifetime
+    await new Promise(r => setTimeout(r, 1600));
+    await expect(jwt.decode(secret, token)).to.be.rejected;
+  });
+});
+
 describe("jwt#decode", () => {
   it("should decode with a single secret and return the kid", async () => {
     const secret = key();

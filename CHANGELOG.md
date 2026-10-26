@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Work queues on NATS.** `ensureStream(nats, name, { type: "queue" })` creates a stream that keeps each
+  job until a worker acknowledges it. `consume` delivers a queue's pending jobs, including those enqueued
+  while no worker ran, and instances of one app share the work. See [docs/NATS.md](docs/NATS.md#queues).
 - **Per-system keys in `jwt`.** `encode(secret, timeout, data, { kid })` puts a key id in the token's protected
   header. `decode` also accepts a map from `kid` to secret, or a lookup function, and picks the key by the
   token's `kid`; a missing or unknown `kid` fails like a bad token. See

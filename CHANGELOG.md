@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.1
+
+### Fixed
+
+- The package now includes `docs/` and `CHANGELOG.md`, so the README's links to the guides and the
+  migration notes work from `node_modules`. No code changes.
+
 ## 0.4.0
 
 A deliberately breaking release with no compatibility shims: octonet now keeps only the contracts services

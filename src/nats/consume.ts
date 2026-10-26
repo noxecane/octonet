@@ -10,6 +10,7 @@ import {
 import { NatsConnection, nanos } from "@nats-io/transport-node";
 import ms from "ms";
 
+import { TRACEPARENT_HEADER, nextTraceparent, parseTraceparent, runInContext } from "../context";
 import { Logger } from "../logging/logger";
 import { decode } from "./codec";
 import { Handler, handlersOf } from "./decorators";
@@ -99,7 +100,7 @@ export async function consume(nats: NatsConnection, instances: object[], cfg: Co
     const consumer = await js.consumers.get(handler.stream, durable);
     const messages = await consumer.consume({ max_messages: cfg.batch_size ?? 10 });
     running.push(messages);
-    run(messages, handler, cfg.logger.child({ subject, consumer: durable }), maxDeliver);
+    run(messages, handler, durable, cfg.logger, maxDeliver);
   }
 
   return {
@@ -117,28 +118,36 @@ export function durableName(stream: string, app: string, subject: string) {
   return `${stream}_${app}_${subject.replace(/[.*>]/g, c => safe[c])}`;
 }
 
-async function run(messages: ConsumerMessages, handler: Handler, logger: Logger, maxDeliver: number) {
+async function run(messages: ConsumerMessages, handler: Handler, consumer: string, logger: Logger, maxDeliver: number) {
   try {
     for await (const msg of messages) {
-      let data: unknown;
-      try {
-        data = decode(msg.data);
-        logger.log({ data, subject: msg.subject });
-        await handler.handle(data);
-        msg.ack();
-      } catch (err) {
-        const attempt = msg.info.deliveryCount;
-        const dropped = attempt >= maxDeliver;
-        logger.error(err, { data, subject: msg.subject, attempt, dropped });
-        if (dropped) {
-          msg.term();
-        } else {
-          msg.nak();
+      // each message continues its publisher's trace, so the handler's logs and
+      // calls carry it, along with the consumer and subject
+      const incoming = msg.headers?.get(TRACEPARENT_HEADER);
+      const traceparent = parseTraceparent(incoming) ? incoming : nextTraceparent();
+      const ctx = { traceparent, caller: {}, consumer, subject: msg.subject };
+
+      await runInContext(ctx, async () => {
+        let data: unknown;
+        try {
+          data = decode(msg.data);
+          logger.log({ data });
+          await handler.handle(data);
+          msg.ack();
+        } catch (err) {
+          const attempt = msg.info.deliveryCount;
+          const dropped = attempt >= maxDeliver;
+          logger.error(err, { data, attempt, dropped });
+          if (dropped) {
+            msg.term();
+          } else {
+            msg.nak();
+          }
         }
-      }
+      });
     }
   } catch (err) {
     // never let a broken subscription take the process down
-    logger.error(err, "subscription stopped");
+    logger.error(err, { consumer, stopped: true });
   }
 }

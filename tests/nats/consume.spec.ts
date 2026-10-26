@@ -1,7 +1,9 @@
+import { jetstream } from "@nats-io/jetstream";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 
 import { Consumers, consume, ensureStream, publish, stream, subscribe } from "../../src";
+import { parseTraceparent, runInContext } from "../../src/context";
 import { durableName } from "../../src/nats/consume";
 import { sleep } from "../helpers";
 import { bufferLogger, natsFixture } from "./helpers";
@@ -261,6 +263,61 @@ describe("consume", () => {
     await expect(consume(fx.nats, [new Plain()], { app: "tests", logger })).to.be.rejectedWith(
       "Plain has no @stream decorator"
     );
+  });
+});
+
+describe("consume: context", () => {
+  it("should handle each message in its publisher's trace, with the consumer on every log", async () => {
+    const name = fx.streamName();
+    await ensureStream(fx.nats, name, { type: "broadcast", buffer: 10 });
+    const { logger, records } = bufferLogger();
+    let handled = false;
+
+    @stream(name)
+    class Audited {
+      @subscribe("event")
+      handle() {
+        // the app's own log, written while handling the message
+        logger.log({ step: "handled" });
+        handled = true;
+      }
+    }
+
+    running.push(await consume(fx.nats, [new Audited()], { app: "tests", logger }));
+    const trace = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+    await runInContext({ traceparent: trace, caller: {} }, () => publish(fx.nats, `${name}.event`, {}));
+    await until(() => handled);
+
+    const record = records().find(r => r.step === "handled");
+    expect(record).to.include({
+      trace_id: "4bf92f3577b34da6a3ce929d0e0e4736",
+      consumer: durableName(name, "tests", "event"),
+      subject: `${name}.event`
+    });
+  });
+
+  it("should start a trace for a message published without one", async () => {
+    const name = fx.streamName();
+    await ensureStream(fx.nats, name, { type: "broadcast", buffer: 10 });
+    const { logger, records } = bufferLogger();
+    let handled = false;
+
+    @stream(name)
+    class Plain {
+      @subscribe("event")
+      handle() {
+        logger.log({ step: "handled" });
+        handled = true;
+      }
+    }
+
+    running.push(await consume(fx.nats, [new Plain()], { app: "tests", logger }));
+    // straight through the nats client: no traceparent header
+    await jetstream(fx.nats).publish(`${name}.event`, "{}");
+    await until(() => handled);
+
+    const record = records().find(r => r.step === "handled");
+    expect(parseTraceparent(`00-${record.trace_id}-00f067aa0ba902b7-01`)).to.not.be.undefined;
   });
 });
 

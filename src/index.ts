@@ -1,5 +1,5 @@
 export * from "./http/agent";
-export { Caller } from "./context";
+export { Caller, Context, ContextOptions, currentContext, outgoingTraceparent, withContext } from "./context";
 export * from "./http/errors";
 export * from "./http/logging";
 export * from "./http/receive";

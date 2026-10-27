@@ -3,7 +3,7 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 
 import { Consumers, consume, ensureStream, publish, stream, subscribe } from "../../src";
-import { parseTraceparent, runInContext } from "../../src/context";
+import { parseTraceparent, withContext } from "../../src/context";
 import { durableName } from "../../src/nats/consume";
 import { sleep } from "../helpers";
 import { bufferLogger, natsFixture } from "./helpers";
@@ -307,7 +307,7 @@ describe("consume: context", () => {
 
     running.push(await consume(fx.nats, [new Audited()], { app: "tests", logger }));
     const trace = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
-    await runInContext({ traceparent: trace, caller: {} }, () => publish(fx.nats, `${name}.event`, {}));
+    await withContext({ traceparent: trace }, () => publish(fx.nats, `${name}.event`, {}));
     await until(() => handled);
 
     const record = records().find(r => r.step === "handled");

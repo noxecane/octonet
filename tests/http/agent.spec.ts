@@ -21,7 +21,7 @@ import {
   useErrors,
   useLogger
 } from "../../src";
-import { parseTraceparent, runInContext } from "../../src/context";
+import { parseTraceparent, withContext } from "../../src/context";
 import { randomString } from "../helpers";
 import { TestRequest, createTestApp, startServer, stopServer } from "./server";
 
@@ -184,7 +184,7 @@ describe("createAgent", () => {
     const bob = { id: "u2" };
     const context = { traceparent: "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01", caller: { user: bob } };
 
-    const [forAda, original] = await runInContext(context, () =>
+    const [forAda, original] = await withContext(context, () =>
       Promise.all([agentA.for({ user: ada }).get<TestRequest>(echo), agentA.get<TestRequest>(echo)])
     );
 

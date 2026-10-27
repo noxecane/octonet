@@ -1,6 +1,6 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 
-import { Caller, TRACEPARENT_HEADER, nextTraceparent, parseTraceparent, runInContext } from "../context";
+import { Caller, TRACEPARENT_HEADER, withContext } from "../context";
 import { UnauthorizedError } from "./errors";
 import { DecodeKeys, Decoded, decode } from "../jwt";
 
@@ -40,16 +40,15 @@ export interface ReceiveConfig {
  */
 export function receive(config: ReceiveConfig): RequestHandler {
   return (req: Request, _res: Response, next: NextFunction) => {
-    const incoming = req.headers[TRACEPARENT_HEADER];
-    const traceparent = parseTraceparent(incoming) ? (incoming as string) : nextTraceparent();
+    const traceparent = req.get(TRACEPARENT_HEADER);
     req.caller = {};
 
     identify(config, req).then(
       caller => {
         req.caller = caller;
-        runInContext({ traceparent, caller }, () => next());
+        withContext({ traceparent, caller }, () => next());
       },
-      err => runInContext({ traceparent, caller: req.caller }, () => next(err))
+      err => withContext({ traceparent, caller: req.caller }, () => next(err))
     );
   };
 }

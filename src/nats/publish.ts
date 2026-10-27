@@ -1,7 +1,7 @@
 import { jetstream } from "@nats-io/jetstream";
 import { NatsConnection, headers } from "@nats-io/transport-node";
 
-import { TRACEPARENT_HEADER, currentContext, nextTraceparent } from "../context";
+import { TRACEPARENT_HEADER, outgoingTraceparent } from "../context";
 import { encode } from "./codec";
 
 export interface PublishOptions {
@@ -24,7 +24,7 @@ export interface PublishOptions {
  */
 export async function publish(nats: NatsConnection, subject: string, data: unknown, opts: PublishOptions = {}) {
   const h = headers();
-  h.set(TRACEPARENT_HEADER, nextTraceparent(currentContext()?.traceparent));
+  h.set(TRACEPARENT_HEADER, outgoingTraceparent());
 
   await jetstream(nats).publish(subject, encode(data), { headers: h, ...(opts.msgID ? { msgID: opts.msgID } : {}) });
 }

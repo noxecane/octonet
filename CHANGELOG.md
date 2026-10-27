@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.0
+
+### Added
+
+- **Context for any kind of work.** `withContext({ traceparent?, caller?, fields? }, fn)` runs `fn` as one
+  unit of work, the way `receive` does for a request and `consume` for a message: agents, `publish` and
+  loggers inside it see its trace and caller, and loggers add its `fields` to every line. Use it for cron
+  jobs, scripts and your own entry points. Inside another context it inherits the trace, caller and fields,
+  and overrides only what you pass. See [docs/Context.md](docs/Context.md).
+- **`currentContext()`** returns `{ traceId, caller, fields }` of the work being handled, e.g. to show a
+  user a reference to quote.
+- **`outgoingTraceparent()`** returns the `traceparent` to send with work leaving this one, for carrying a
+  trace across a queue or transport octonet doesn't own.
+
+`receive` and `consume` are now built on `withContext`. Log lines are unchanged.
+
 ## 0.4.1
 
 ### Fixed

@@ -156,6 +156,8 @@ Each guide is organised by what you want to do.
 - [NATS](docs/NATS.md): create streams, publish events once, consume events, run job queues, shut down.
 - [Logging](docs/Logging.md): log requests, calls and errors, keep secrets out, follow a trace, ship to
   Loki.
+- [Context](docs/Context.md): give cron jobs, scripts and your own entry points the trace, caller and log
+  labels that requests and messages get, and carry a trace across boundaries octonet doesn't own.
 - [System tokens (JWT)](docs/JWT.md): the token format services prove themselves with, one key per
   service.
 - [Sessions](docs/Sessions.md): revocable user sessions on Redis.

@@ -3,7 +3,7 @@ import Bunyan, { ERROR, INFO } from "bunyan";
 import { Request, Response } from "express";
 
 import { LokiConfig, LokiStream } from "./loki";
-import { currentContext, parseTraceparent } from "../context";
+import { currentContext } from "../context";
 
 type Serializer = (input: any) => any;
 type Serializers = {
@@ -162,18 +162,14 @@ export class Logger {
     }
   }
 
-  // the bunyan logger to write with: inside a request or a NATS message, a cheap
-  // child adding the trace, calling service and consumer. Never the user: logging user data is the app's call
+  // the bunyan logger to write with: inside a context, a cheap child adding the
+  // context's fields, trace and calling service. Never the user: logging user data is the app's call
   private scoped() {
     const ctx = currentContext();
     if (!ctx) return this.logger;
 
-    const fields: Record<string, string> = {};
-    const trace = parseTraceparent(ctx.traceparent);
-    if (trace) fields.trace_id = trace.traceId;
+    const fields: Record<string, string> = { ...ctx.fields, trace_id: ctx.traceId };
     if (ctx.caller.system) fields.caller_system = ctx.caller.system;
-    if (ctx.consumer) fields.consumer = ctx.consumer;
-    if (ctx.subject) fields.subject = ctx.subject;
 
     return this.logger.child(fields, true);
   }

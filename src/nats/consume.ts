@@ -10,7 +10,7 @@ import {
 import { NatsConnection, nanos } from "@nats-io/transport-node";
 import ms from "ms";
 
-import { TRACEPARENT_HEADER, nextTraceparent, parseTraceparent, runInContext } from "../context";
+import { TRACEPARENT_HEADER, withContext } from "../context";
 import { Logger } from "../logging/logger";
 import { decode } from "./codec";
 import { Handler, handlersOf } from "./decorators";
@@ -123,11 +123,10 @@ async function run(messages: ConsumerMessages, handler: Handler, consumer: strin
     for await (const msg of messages) {
       // each message continues its publisher's trace, so the handler's logs and
       // calls carry it, along with the consumer and subject
-      const incoming = msg.headers?.get(TRACEPARENT_HEADER);
-      const traceparent = parseTraceparent(incoming) ? incoming : nextTraceparent();
-      const ctx = { traceparent, caller: {}, consumer, subject: msg.subject };
+      const traceparent = msg.headers?.get(TRACEPARENT_HEADER);
+      const fields = { consumer, subject: msg.subject };
 
-      await runInContext(ctx, async () => {
+      await withContext({ traceparent, fields }, async () => {
         let data: unknown;
         try {
           data = decode(msg.data);

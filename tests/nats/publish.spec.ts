@@ -1,7 +1,7 @@
 import { expect } from "chai";
 
 import { ensureStream, publish } from "../../src";
-import { parseTraceparent, runInContext } from "../../src/context";
+import { parseTraceparent, withContext } from "../../src/context";
 import { decode } from "../../src/nats/codec";
 import { natsFixture } from "./helpers";
 
@@ -46,7 +46,7 @@ describe("publish", () => {
     await ensureStream(fx.nats, name, { type: "broadcast", buffer: 10 });
     const current = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
 
-    await runInContext({ traceparent: current, caller: {} }, () => publish(fx.nats, `${name}.credit`, {}));
+    await withContext({ traceparent: current }, () => publish(fx.nats, `${name}.credit`, {}));
 
     const stored = await fx.jsm.streams.getMessage(name, { last_by_subj: `${name}.credit` });
     const sent = parseTraceparent(stored.header.get("traceparent"));

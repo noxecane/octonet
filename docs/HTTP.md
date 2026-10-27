@@ -8,7 +8,7 @@ Two pieces, one on each side of a call:
   Every call carries the trace and a [system token](JWT.md) naming your service and the user it acts for.
 
 Nothing is passed along by hand. While `receive` handles a request, agents, `publish` and loggers called
-from it see its trace and caller, including across `await`s.
+from it see its trace and caller, including across `await`s. See [Context](Context.md).
 
 ## Describe your user
 

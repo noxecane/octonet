@@ -5,7 +5,8 @@ service shares:
 
 - the same field names for requests, responses, outgoing calls and errors;
 - the same redaction: chosen paths become `[REDACTED]`, credentials become fingerprints;
-- the same context fields (`trace_id`, `caller_system`, `consumer`, `subject`), added for you;
+- the same [context](Context.md) fields (`trace_id`, `caller_system`, and labels such as `consumer` and
+  `subject`), added for you;
 - optionally, the same lines shipped to Grafana Loki.
 
 ## Create a logger for your service
@@ -84,15 +85,18 @@ level with both. You can call `axiosRequest`, `axiosResponse` and `axiosError` o
 
 ## Follow one request or message through the logs
 
-Every line written while [`receive`](HTTP.md#know-who-is-calling-you) handles a request, or
-[`consume`](NATS.md#react-to-another-services-events) handles a message, gets:
+Every line written inside a [context](Context.md) gets:
 
 - `trace_id`: the trace's id, the same in every service the request or message reaches;
 - `caller_system`: the calling service, when there is one;
-- `consumer` and `subject`: the durable consumer and the message's subject, for a NATS message.
+- the context's fields: `consumer` and `subject` for a NATS message, or your own from `withContext`.
 
-The user is never added: what to log about users is your app's call. Outside a request or message, lines
-have none of these fields.
+[`receive`](HTTP.md#know-who-is-calling-you) starts a context for each request and
+[`consume`](NATS.md#react-to-another-services-events) for each message; for cron jobs, scripts and other
+work, [start one yourself](Context.md#start-a-context-for-other-work).
+
+The user is never added: what to log about users is your app's call. Outside any context, lines have none
+of these fields.
 
 ## Keep secrets out of logs
 

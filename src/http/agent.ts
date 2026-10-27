@@ -1,7 +1,7 @@
 import axios, { AxiosHeaders, AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import ms from "ms";
 
-import { TRACEPARENT_HEADER, currentContext, nextTraceparent } from "../context";
+import { TRACEPARENT_HEADER, currentContext, outgoingTraceparent } from "../context";
 import { useErrors } from "./errors";
 import { useLogger } from "./logging";
 import { encode } from "../jwt";
@@ -93,15 +93,14 @@ function build(config: AgentConfig, identity?: Identity): HttpAgent {
 }
 
 async function applyContracts(config: AgentConfig, identity: Identity | undefined, req: InternalAxiosRequestConfig) {
-  const ctx = currentContext();
-  const user = identity ? identity.user : ctx?.caller.user;
+  const user = identity ? identity.user : currentContext()?.caller.user;
   const { auth } = config;
 
   const claims = user === undefined ? { service: config.service } : { service: config.service, user };
   const token = await encode(auth.key, auth.timeout ?? "10s", claims, { kid: auth.kid });
 
   const headers = AxiosHeaders.from(req.headers);
-  headers.set(TRACEPARENT_HEADER, nextTraceparent(ctx?.traceparent));
+  headers.set(TRACEPARENT_HEADER, outgoingTraceparent());
   headers.set("Authorization", `${auth.scheme} ${token}`);
 
   req.headers = headers;

@@ -3766,13 +3766,13 @@ __metadata:
   linkType: hard
 
 "multer@npm:^2.2.0":
-  version: 2.4.0
-  resolution: "multer@npm:2.4.0"
+  version: 2.5.0
+  resolution: "multer@npm:2.5.0"
   dependencies:
     append-field: "npm:^1.0.0"
     busboy: "npm:^1.6.0"
     type-is: "npm:^1.6.18"
-  checksum: 10c0/4e271959ba4c9184f26dbd98a06eeb2ee8008e8ca2d1d30cb7856f642678648c085ed064627e9db01ae07442adfd275a7124fb409335a8f754ec41df51f1f1d0
+  checksum: 10c0/a89df3eae74ec2e9bfcbf272c8ce7e7f18597bd855ac193568103d83fbd8cb26d4539025a19df1bd52dc05aa0090745949f0ec90aecf479ca0fdc8a1d80121ee
   languageName: node
   linkType: hard
 
@@ -4823,9 +4823,9 @@ __metadata:
   linkType: hard
 
 "undici@npm:^8.4.1":
-  version: 8.11.2
-  resolution: "undici@npm:8.11.2"
-  checksum: 10c0/106f6991178fb7562fd90cdec7993c5f807a9428682306091f0c4b27fc474ec291f868e29972c6252988bf061ad193df943b3b99e775be157a28d92bbb95699d
+  version: 8.12.3
+  resolution: "undici@npm:8.12.3"
+  checksum: 10c0/714919e62b4160eea195fb35c7f5c4907235741e47bfde8a014ac58f6d24df13434e23400d7f48e2c455fd2b259d27f07fce514f04a5b4e99936ba62cbc4bb71
   languageName: node
   linkType: hard
 
